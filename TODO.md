@@ -1,0 +1,14 @@
+3dobs TODOs:
+ - [x] Help menu
+     - [x] About window
+ - [ ] File logger
+ - [x] Move console to be under objects
+ - [x] Don't have the viewport window be scrollable
+ - [x] Object rotation with left click + mouse movement (very rudimentary implementation, but works)
+ - [x] Camera movement with shift + left click + mouse movement
+ - [x] Ability to change active model
+ - [x] Hide inactive models
+ - [x] Scroll zoom
+ - [x] (BUG) Fix some meshes not rotating around their origin point (in actuality, they don't have an origin point and are only rotating around 0.0, 0.0, 0.0)
+     - First thing that comes to mind is just rotating them around the center_point of the mesh (which is the bounding box's center point)
+ - [x] Default material
