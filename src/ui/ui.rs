@@ -28,7 +28,7 @@ impl Default for State {
             first_frame_drawn: false,
             is_cursor_captured: false,
             can_capture_cursor: false,
-            draw_grid: true,
+            draw_grid: false,
             draw_aabb: false,
             show_help_menu_about: false,
             wireframe: false,

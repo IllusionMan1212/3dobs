@@ -8,7 +8,7 @@ const SUPPORTED_TEXTURE_TYPES: [russimp::material::TextureType; 2] = [
     russimp::material::TextureType::Specular,
 ];
 
-const SCALING_FACTOR: f32 = 10.0;
+const SCALING_FACTOR: f32 = 8.0;
 
 #[derive(Debug)]
 pub struct Model {
