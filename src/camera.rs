@@ -29,22 +29,20 @@ impl Camera {
         }
     }
 
-    pub fn handle_mouse_scroll(&mut self, yoffset: f32, can_capture_cursor: bool) {
+    pub fn handle_mouse_scroll(&mut self, yoffset: f32, can_capture_cursor: bool, fov_zoom: bool) {
         if !can_capture_cursor { return }
-        self.fov -= yoffset;
+        if fov_zoom {
+            self.fov -= yoffset;
 
-        if self.fov <= 0.5 {
-            self.fov = 0.5;
+            if self.fov <= 0.5 {
+                self.fov = 0.5;
+            }
+            if self.fov >= 85.0 {
+                self.fov = 85.0;
+            }
+        } else {
+            self.position = self.position + (self.front * self._speed) + glm::vec3(0.0, 0.0, -yoffset);
         }
-        if self.fov >= 45.0 {
-            self.fov = 45.0;
-        }
-
-        // if yoffset > 0.0 {
-        //     self.position = self.position + (self.front * self._speed) + glm::vec3(0.0, 0.0, yoffset);
-        // } else {
-        //     self.position = self.position - (self.front * self._speed) + glm::vec3(0.0, 0.0, yoffset);
-        // }
     }
 
     pub fn move_camera(&mut self, xoffset: f32, yoffset: f32) {

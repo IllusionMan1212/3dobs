@@ -1,19 +1,22 @@
 use glad_gl::gl;
-use anyhow::{Context, Result};
+use anyhow::Result;
+
+pub struct ShaderSource {
+    pub name: String,
+    pub source: String,
+}
 
 pub struct Shader {
     pub program_id: gl::GLuint,
 }
 
 impl Shader {
-    pub fn new(vertex_path: &str, frag_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut vertex_shader_source = std::fs::read_to_string(vertex_path).with_context(|| format!("Failed to read vertex shader file: {}", vertex_path))?;
-        vertex_shader_source.push('\0');
-        let vertex_shader_source = std::ffi::CStr::from_bytes_with_nul(vertex_shader_source.as_bytes())?;
+    pub fn new(vertex_obj: &mut ShaderSource, frag_obj: &mut ShaderSource) -> Result<Self, Box<dyn std::error::Error>> {
+        vertex_obj.source.push('\0');
+        let vertex_shader_source = std::ffi::CStr::from_bytes_with_nul(vertex_obj.source.as_bytes())?;
 
-        let mut frag_shader_source = std::fs::read_to_string(frag_path).with_context(|| format!("Failed to read frag shader file: {}", frag_path))?;
-        frag_shader_source.push('\0');
-        let frag_shader_source = std::ffi::CStr::from_bytes_with_nul(frag_shader_source.as_bytes())?;
+        frag_obj.source.push('\0');
+        let frag_shader_source = std::ffi::CStr::from_bytes_with_nul(frag_obj.source.as_bytes())?;
 
         unsafe {
             let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
@@ -22,13 +25,15 @@ impl Shader {
             gl::CompileShader(vertex_shader);
             let mut success1 = 0;
             gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success1);
+            #[cfg(debug_assertions)]
             println!("vertex shader {:?} compiled with status: {}",
-                std::path::Path::new(vertex_path).file_name().unwrap(),
+                vertex_obj.name,
                 success1
             );
             if success1 == 0 {
                 let info_buf = [0u8; 512];
                 gl::GetShaderInfoLog(vertex_shader as u32, 512, std::ptr::null_mut(), info_buf.as_ptr() as *mut i8);
+                #[cfg(debug_assertions)]
                 println!("vertex shader info: {}", std::str::from_utf8(&info_buf).unwrap());
             }
 
@@ -39,13 +44,15 @@ impl Shader {
 
             let mut success2 = 0;
             gl::GetShaderiv(frag_shader, gl::COMPILE_STATUS, &mut success2);
+            #[cfg(debug_assertions)]
             println!("frag shader {:?} compiled with status: {}",
-                std::path::Path::new(frag_path).file_name().unwrap(),
+                frag_obj.name,
                 success2
             );
             if success2 == 0 {
                 let info_buf2 = [0u8; 512];
                 gl::GetShaderInfoLog(frag_shader as u32, 512, std::ptr::null_mut(), info_buf2.as_ptr() as *mut i8);
+                #[cfg(debug_assertions)]
                 println!("frag shader info: {}", std::str::from_utf8(&info_buf2).unwrap());
             }
 

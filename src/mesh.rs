@@ -84,6 +84,8 @@ pub struct Mesh {
     pub material: Material,
 
     vao: u32,
+    vbo: u32,
+    ebo: u32,
 }
 
 impl Mesh {
@@ -128,7 +130,9 @@ impl Mesh {
             indices,
             textures,
             material,
+            vbo,
             vao,
+            ebo,
             position,
             rotation,
             scale,
@@ -137,8 +141,8 @@ impl Mesh {
     }
 
     pub fn draw(&self, shader: &Shader, scale: f32, pivot: glm::Vec3) {
-        let mut diffuse = 1;
-        let mut specular = 1;
+        // let mut diffuse = 1;
+        // let mut specular = 1;
 
         shader.use_shader();
 
@@ -152,25 +156,25 @@ impl Mesh {
         shader.set_3fv("material.specular", self.material.specular);
         shader.set_float("material.shininess", self.material.shininess);
 
-        for i in 0..self.textures.len() {
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0 + i as u32);
-                match self.textures[i].typ {
-                    russimp::material::TextureType::Diffuse => {
-                        diffuse += 1;
-                        shader.set_int(format!("material.texture_diffuse{}", diffuse).as_str(), i as i32);
-                    },
-                    russimp::material::TextureType::Specular => {
-                        specular += 1;
-                        shader.set_int(format!("material.texture_specular{}", specular).as_str(), i as i32);
-                    },
-                    _ => {}, // don't do anything because unsupported texture types are logged
-                             // when the model is loaded
-                }
+        // for i in 0..self.textures.len() {
+        //     unsafe {
+        //         gl::ActiveTexture(gl::TEXTURE0 + i as u32);
+        //         match self.textures[i].typ {
+        //             russimp::material::TextureType::Diffuse => {
+        //                 diffuse += 1;
+        //                 shader.set_int(format!("material.texture_diffuse{}", diffuse).as_str(), i as i32);
+        //             },
+        //             russimp::material::TextureType::Specular => {
+        //                 specular += 1;
+        //                 shader.set_int(format!("material.texture_specular{}", specular).as_str(), i as i32);
+        //             },
+        //             _ => {}, // don't do anything because unsupported texture types are logged
+        //                      // when the model is loaded
+        //         }
 
-                gl::BindTexture(gl::TEXTURE_2D, self.textures[i].id);
-            }
-        }
+        //         gl::BindTexture(gl::TEXTURE_2D, self.textures[i].id);
+        //     }
+        // }
 
         unsafe {
             // draw Mesh
@@ -186,8 +190,22 @@ impl Mesh {
     pub fn rotate(&mut self, rotation: glm::Vec3) {
         self.rotation = self.rotation + rotation;
     }
+
+    pub fn reset_rotation(&mut self) {
+        self.rotation = glm::vec3(0.0, 0.0, 0.0);
+    }
 }
 
+impl Drop for Mesh {
+    fn drop(&mut self) {
+        unsafe {
+            gl::BindVertexArray(0);
+            gl::DeleteBuffers(1, &self.vbo);
+            gl::DeleteBuffers(1, &self.ebo);
+            gl::DeleteVertexArrays(1, &self.vao);
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 #[repr(packed(2))]

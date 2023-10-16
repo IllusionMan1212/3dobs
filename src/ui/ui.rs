@@ -1,6 +1,6 @@
 use glad_gl::gl;
 
-use crate::{camera::Camera, model, imgui_glfw_support, imgui_opengl_renderer, mesh, ui, log};
+use crate::{camera::Camera, model, imgui_glfw_support, imgui_opengl_renderer, mesh, ui, log, utils};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,6 +12,8 @@ pub struct State {
     pub can_capture_cursor: bool,
     pub draw_grid: bool,
     pub draw_aabb: bool,
+    pub fov_zoom: bool,
+    pub rotation_speed: f32,
     pub wireframe: bool,
     pub first_frame_drawn: bool,
     pub camera: Camera,
@@ -30,6 +32,8 @@ impl Default for State {
             can_capture_cursor: false,
             draw_grid: false,
             draw_aabb: false,
+            fov_zoom: true,
+            rotation_speed: 1.0,
             show_help_menu_about: false,
             wireframe: false,
             camera: Camera::new(),
@@ -89,22 +93,7 @@ pub fn import_model(state: &mut State) {
             Some(m) => m,
             None => return,
         };
-    for model_path in &models {
-        let model = model::Model::new(model_path.to_str().unwrap(), state);
-        match model {
-            Ok(m) => {
-                state.active_model = Some(m.id);
-                state.objects.push(m);
-                state.camera.update_position(state.active_model, &state.objects);
-            },
-            Err(e) => {
-                let error = format!("Error loading model \"{}\": {}", model_path.to_str().unwrap(), e);
-                println!("{}", error);
-
-                state.logger.log(&error, log::LogLevel::Error);
-            },
-        }
-    }
+    utils::import_models_from_paths(&models, state);
 }
 
 pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::Window, delta_time: f32) {
@@ -197,6 +186,7 @@ fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool 
             return true;
         }
         if ui.checkbox("Selected", &mut (Some(state.objects[idx].id) == state.active_model)) {
+            state.objects[idx].reset_rotation();
             state.active_model = Some(state.objects[idx].id);
             state.camera.update_position(state.active_model, &state.objects);
         }
@@ -213,9 +203,13 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
 
             while i < state.objects.len() {
                 if draw_object_hierarchy(ui, state, i) {
+                    let selected_obj_id = state.objects[i].id;
                     state.objects.remove(i);
-                    state.active_model = state.objects.last().and_then(|o| Some(o.id));
-                    state.camera.update_position(state.active_model, &state.objects);
+                    if state.active_model == Some(selected_obj_id) {
+                        let model = state.objects.last_mut().map(|m| m.reset_rotation());
+                        state.active_model = model.and_then(|o| Some(o.id));
+                        state.camera.update_position(state.active_model, &state.objects);
+                    }
                     continue;
                 }
 
@@ -277,10 +271,18 @@ fn create_initial_docking(ui: &imgui::Ui, state: &mut State) {
             if !state.first_frame_drawn {
                 space.split(
                     imgui::Direction::Right,
-                    0.3,
+                    300.0 / ui.io().display_size[0],
                     |right| {
-                        right.dock_window("Objects");
-                        right.dock_window("Console");
+                        right.split(
+                            imgui::Direction::Up,
+                            0.6,
+                            |up| {
+                                up.dock_window("Objects");
+                            },
+                            |down| {
+                                down.dock_window("Console");
+                            }
+                        )
                     },
                     |left| {
                         left.dock_window("Viewer");
@@ -297,6 +299,7 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
     ui.window("Viewer")
         .size(ui.content_region_avail(), imgui::Condition::FirstUseEver)
         .no_decoration()
+        .scrollable(!state.can_capture_cursor)
         .resizable(true)
         .build(|| {
             let mut tex_size = ui.content_region_avail();
@@ -360,12 +363,21 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
             ui.same_line();
             ui.checkbox("Bounding box", &mut state.draw_aabb);
             ui.same_line();
-            ui.set_next_item_width(200.0);
+            ui.checkbox("FOV zoom", &mut state.fov_zoom);
+            ui.same_line();
+            ui.set_next_item_width(150.0);
             imgui::Drag::new("Camera Speed")
                 .range(1.0, 10000.0)
                 .speed(1.0)
                 .display_format("%.3f")
                 .build(ui, &mut state.camera.speed);
+            ui.same_line();
+            ui.set_next_item_width(150.0);
+            imgui::Drag::new("Rotation Speed")
+                .range(0.1, 100.0)
+                .speed(0.5)
+                .display_format("%.3f")
+                .build(ui, &mut state.rotation_speed);
             imgui::Image::new(imgui::TextureId::new(texture.try_into().unwrap()), tex_size)
                 // flip the image vertically
                 .uv0([0.0, 1.0])
@@ -398,6 +410,8 @@ pub fn draw_ui(
     if state.show_help_menu_about {
         ui.window("About")
             .size([300.0, 150.0], imgui::Condition::FirstUseEver)
+            .resizable(false)
+            .movable(false)
             .opened(&mut state.show_help_menu_about)
             .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
             .position_pivot([0.5, 0.5])
@@ -417,7 +431,7 @@ pub fn draw_ui(
 
     ui.end_frame_early();
 
-    if !state.is_cursor_captured {
+    if !state.can_capture_cursor {
         let cursor = ui.mouse_cursor();
         if *last_cursor != cursor {
             *last_cursor = cursor;

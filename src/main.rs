@@ -2,7 +2,7 @@ use glfw::{Action, Context, Key, Modifiers};
 use glad_gl::gl;
 use anyhow;
 
-use threedobs::{shader, ui::ui};
+use threedobs::{shader, ui::ui, utils};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
@@ -23,9 +23,36 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
     let (mut imgui, glfw_platform, renderer) = ui::init_imgui(&mut window);
 
-    let mesh_shader = shader::Shader::new("shaders/vertex.glsl", "shaders/frag.glsl")?;
-    let light_shader = shader::Shader::new("shaders/vertex.glsl", "shaders/light_f.glsl")?;
-    let grid_shader = shader::Shader::new("shaders/grid_v.glsl", "shaders/grid_f.glsl")?;
+    let mesh_shader = shader::Shader::new(
+        &mut shader::ShaderSource{
+            name: "vertex.glsl".to_string(),
+            source: include_str!("../shaders/vertex.glsl").to_string(),
+        },
+        &mut shader::ShaderSource{
+            name: "frag.glsl".to_string(),
+            source: include_str!("../shaders/frag.glsl").to_string(),
+        },
+        )?;
+    let light_shader = shader::Shader::new(
+        &mut shader::ShaderSource{
+            name: "vertex.glsl".to_string(),
+            source: include_str!("../shaders/vertex.glsl").to_string(),
+        },
+        &mut shader::ShaderSource{
+            name: "light_f.glsl".to_string(),
+            source: include_str!("../shaders/light_f.glsl").to_string(),
+        },
+        )?;
+    let grid_shader = shader::Shader::new(
+        &mut shader::ShaderSource{
+            name: "grid_v.glsl".to_string(),
+            source: include_str!("../shaders/grid_v.glsl").to_string(),
+        },
+        &mut shader::ShaderSource{
+            name: "grid_f.glsl".to_string(),
+            source: include_str!("../shaders/grid_f.glsl").to_string(),
+        },
+        )?;
 
     let vertices: [f32; 288] = [
         // positions // normals // texture coords
@@ -198,7 +225,10 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 if let Some(active_model) = state.active_model {
                                     let model = state.objects.iter_mut().find(|m| m.id == active_model).unwrap();
-                                    model.rotate(xoffset * state.camera.sensitivity, yoffset * state.camera.sensitivity);
+                                    // let x_rotation = glm::quat_angle_axis(xoffset * state.camera.sensitivity, &state.camera.up);
+                                    let x_rotation = xoffset * state.camera.sensitivity * state.rotation_speed;
+                                    let y_rotation = yoffset * state.camera.sensitivity * state.rotation_speed;
+                                    model.rotate(x_rotation, y_rotation);
                                 }
                             }
                         }
@@ -313,7 +343,10 @@ fn handle_window_event(window: &mut glfw::Window, event: &glfw::WindowEvent, sta
             window.set_cursor_mode(glfw::CursorMode::Normal);
         }
         glfw::WindowEvent::Scroll(_, yoff) => {
-            state.camera.handle_mouse_scroll(*yoff as f32, state.can_capture_cursor);
+            state.camera.handle_mouse_scroll(*yoff as f32, state.can_capture_cursor, state.fov_zoom);
+        }
+        glfw::WindowEvent::FileDrop(paths) => {
+            utils::import_models_from_paths(paths, state);
         }
         glfw::WindowEvent::FramebufferSize(w, h) => {
             unsafe {

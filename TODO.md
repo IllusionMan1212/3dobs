@@ -12,3 +12,19 @@
  - [x] (BUG) Fix some meshes not rotating around their origin point (in actuality, they don't have an origin point and are only rotating around 0.0, 0.0, 0.0)
      - First thing that comes to mind is just rotating them around the center_point of the mesh (which is the bounding box's center point)
  - [x] Default material
+ - [x] Toggle box for different zooms
+ - [x] Increase max zoom-out
+ - [x] Slider for model rotation speed
+ - [x] Smaller console area
+ - [ ] Better object rotation
+ - [ ] Ability to change rotation pivot point (needs raycasting and shit)
+ - [ ] There might be memory leaks somewhere (tracked it down to russimp, will have to write my own .obj and .stl readers)
+ - [x] Reset object rotation when changing active model
+ - [x] Drag'n'Drop models
+ - [ ] Config for consistent settings between restarts (home dir preferred)
+ - [x] (BUG) when removing a model that's not selected and the selected model is not the last, we select the last one
+     - only select the last one if we removed the selected model
+ - [x] Use filename for the root node
+ - [x] Ship shaders directly in the executable
+
+ - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)

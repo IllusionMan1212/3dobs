@@ -1,6 +1,12 @@
+use std::path::PathBuf;
+
 use glad_gl::gl;
 use glm;
 use anyhow::{Result, Context};
+
+use crate::{ui, log, model};
+
+const SUPPORTED_FILE_EXTENSIONS: [&str; 2] = ["obj", "stl"];
 
 pub fn load_texture(path: &str) -> Result<u32> {
     let tex = image::io::Reader::open(path)
@@ -43,3 +49,36 @@ pub fn mat_ident() -> glm::Mat4 {
     )
 }
 
+pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State) {
+    for model_path in paths {
+        let filename = model_path.file_name();
+        if model_path.is_dir() {
+            state.logger.log(&format!("Skipping directory \"{}\"", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+            continue;
+        }
+        if let Some(ext) = model_path.extension() {
+            if !SUPPORTED_FILE_EXTENSIONS.contains(&ext.to_ascii_lowercase().to_str().unwrap()) {
+                state.logger.log(&format!("Skipping file \"{}\" because it is not an OBJ or STL file", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+                continue;
+            }
+        }
+        let model = model::Model::new(model_path.to_str().unwrap(), state);
+        match model {
+            Ok(mut m) => {
+                state.active_model = Some(m.id);
+                if let Some(model_name) = filename {
+                    state.logger.log(&format!("Loaded model \"{}\"", model_name.to_str().unwrap()), log::LogLevel::Info);
+                    m.name = model_name.to_str().unwrap().to_string();
+                } 
+                state.objects.push(m);
+                state.camera.update_position(state.active_model, &state.objects);
+            },
+            Err(e) => {
+                let error = format!("Error loading model \"{}\": {}", model_path.to_str().unwrap(), e);
+                println!("{}", error);
+
+                state.logger.log(&error, log::LogLevel::Error);
+            },
+        }
+    }
+}

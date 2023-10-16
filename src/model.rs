@@ -137,11 +137,11 @@ fn process_mesh(
 }
 
 fn process_material(mat: &russimp::material::Material) -> Material {
-    let mut mat_name = String::from("Default_Mat");
-    let mut ambient = glm::vec3(0.2, 0.2, 0.2);
-    let mut diffuse = glm::vec3(0.7, 0.7, 0.7);
-    let mut specular = glm::vec3(0.1, 0.1, 0.1);
-    let mut shininess = 32.0;
+    let mat_name = String::from("Default_Mat");
+    let ambient = glm::vec3(0.2, 0.2, 0.2);
+    let diffuse = glm::vec3(0.7, 0.7, 0.7);
+    let specular = glm::vec3(0.1, 0.1, 0.1);
+    let shininess = 32.0;
 
     // TODO: better way of mapping properties
     // for property in mat.properties.iter() {
@@ -316,10 +316,18 @@ impl Model {
         }
     }
 
-    pub fn rotate(&mut self, xoffset: f32, yoffset: f32) {
+    pub fn rotate(&mut self, xoffset: f32, yoffset: f32) -> &mut Self {
         let rotation = glm::vec3(-yoffset, xoffset, 0.0);
         for mesh in &mut self.meshes {
             mesh.rotate(rotation);
         }
+        self
+    }
+
+    pub fn reset_rotation(&mut self) -> &mut Self {
+        for mesh in &mut self.meshes {
+            mesh.reset_rotation();
+        }
+        self
     }
 }
