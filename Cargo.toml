@@ -1,6 +1,6 @@
 [package]
 name = "threedobs"
-version = "0.1.0"
+version = "0.1.1"
 description = "3dobs is a simple OBJ and STL viewer"
 authors = ["IllusionMan1212"]
 edition = "2021"
