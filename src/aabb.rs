@@ -6,30 +6,25 @@ use crate::{mesh::Vertex, shader::Shader};
 pub struct AABB {
     pub min: glm::Vec3,
     pub max: glm::Vec3,
+    indices_len: u32,
+    vao: u32,
 }
 
-#[derive(Debug)]
-pub struct AABBMesh {
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<u32>,
-    pub vao: u32,
-}
-
-impl AABBMesh {
-    pub fn new(aabb: &AABB) -> AABBMesh {
+impl AABB {
+    pub fn new(min: glm::Vec3, max: glm::Vec3) -> AABB {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
 
         let vertices = vec![
-            Vertex { position: glm::vec3(aabb.min.x, aabb.min.y, aabb.min.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.max.x, aabb.min.y, aabb.min.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.max.x, aabb.max.y, aabb.min.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.min.x, aabb.max.y, aabb.min.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.min.x, aabb.min.y, aabb.max.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.max.x, aabb.min.y, aabb.max.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.max.x, aabb.max.y, aabb.max.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(aabb.min.x, aabb.max.y, aabb.max.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(min.x, min.y, min.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(max.x, min.y, min.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(max.x, max.y, min.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(min.x, max.y, min.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(min.x, min.y, max.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(max.x, min.y, max.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(max.x, max.y, max.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex { position: glm::vec3(min.x, max.y, max.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
         ];
 
         let indices = vec![
@@ -69,9 +64,10 @@ impl AABBMesh {
             gl::BindVertexArray(0);
         }
 
-        AABBMesh {
-            vertices,
-            indices,
+        AABB {
+            min,
+            max,
+            indices_len: indices.len() as u32,
             vao,
         }
     }
@@ -85,7 +81,7 @@ impl AABBMesh {
             // draw Mesh
             gl::BindVertexArray(self.vao);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-            gl::DrawElements(gl::TRIANGLES, self.indices.len() as i32, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawElements(gl::TRIANGLES, self.indices_len as i32, gl::UNSIGNED_INT, std::ptr::null());
 
             // reset stuff to default
             gl::BindVertexArray(0);

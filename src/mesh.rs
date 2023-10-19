@@ -80,7 +80,7 @@ pub struct Mesh {
 
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
-    pub textures: Vec<Texture>,
+    // pub textures: Vec<Texture>,
     pub material: Material,
 
     vao: u32,
@@ -89,7 +89,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>, textures: Vec<Texture>, material: Material, transformation: &mut glm::Mat4) -> Mesh {
+    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>) -> Mesh {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -122,21 +122,21 @@ impl Mesh {
             gl::BindVertexArray(0);
         }
 
-        let (position, rotation, scale) = decompose_mat(transformation);
+        // let (position, rotation, scale) = decompose_mat(transformation);
 
         Mesh {
             name: name.to_string(),
             vertices,
             indices,
-            textures,
-            material,
+            // textures,
+            material: Material::new("default".to_string(), glm::vec3(0.4, 0.4, 0.4), glm::vec3(0.7, 0.7, 0.7), glm::vec3(0.1, 0.1, 0.1), 32.0),
             vbo,
             vao,
             ebo,
-            position,
-            rotation,
-            scale,
-            pivot: position,
+            position: glm::vec3(0.0, 0.0, 0.0),
+            rotation: glm::vec3(0.0, 0.0, 0.0),
+            scale: glm::vec3(1.0, 1.0, 1.0),
+            pivot: glm::vec3(0.0, 0.0, 0.0),
         }
     }
 

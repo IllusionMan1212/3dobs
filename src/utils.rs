@@ -4,7 +4,7 @@ use glad_gl::gl;
 use glm;
 use anyhow::{Result, Context};
 
-use crate::{ui, log, model};
+use crate::{log, model, ui, importer};
 
 const SUPPORTED_FILE_EXTENSIONS: [&str; 2] = ["obj", "stl"];
 
@@ -62,14 +62,16 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
                 continue;
             }
         }
-        let model = model::Model::new(model_path.to_str().unwrap(), state);
-        match model {
-            Ok(mut m) => {
+        let obj_result = importer::load_from_file(model_path);
+        match obj_result {
+            Ok(obj) => {
+                let mut m = model::Model::new(obj, state);
+
                 state.active_model = Some(m.id);
                 if let Some(model_name) = filename {
                     state.logger.log(&format!("Loaded model \"{}\"", model_name.to_str().unwrap()), log::LogLevel::Info);
                     m.name = model_name.to_str().unwrap().to_string();
-                } 
+                }
                 state.objects.push(m);
                 state.camera.update_position(state.active_model, &state.objects);
             },
@@ -78,7 +80,7 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
                 println!("{}", error);
 
                 state.logger.log(&error, log::LogLevel::Error);
-            },
+            }
         }
     }
 }
