@@ -154,8 +154,7 @@ fn draw_transformations(ui: &imgui::Ui, mesh: &mut mesh::Mesh) {
 fn draw_mesh_hierarchy(ui: &imgui::Ui, mesh: &mut mesh::Mesh, i: usize) {
     ui.tree_node_config(format!("{}###{}", mesh.name.as_str(), i)).build(|| {
         ui.text(format!("Vertices: {}", mesh.vertices.len()));
-        ui.text(format!("Faces: {}", mesh.vertices.len() / 3));
-        ui.text(format!("Textures: {}", mesh.textures.len()));
+        ui.text(format!("Triangles: {}", mesh.indices.len() / 3));
         ui.tree_node_config(mesh.material.name.as_str()).build(|| {
             ui.text(format!("{}", mesh.material));
         });
