@@ -1,7 +1,7 @@
 use glad_gl::gl;
 use anyhow::Result;
 
-use crate::{shader::Shader, utils};
+use crate::{shader::Shader, utils, importer::Material};
 
 fn decompose_mat(matrix: &mut glm::Mat4) -> (glm::Vec3, glm::Vec3, glm::Vec3) {
     let pos = glm::vec3(matrix.c0.w, matrix.c1.w, matrix.c2.w);
@@ -89,7 +89,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>) -> Mesh {
+    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>, material: Option<Material>) -> Mesh {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -129,7 +129,7 @@ impl Mesh {
             vertices,
             indices,
             // textures,
-            material: Material::new("default".to_string(), glm::vec3(0.4, 0.4, 0.4), glm::vec3(0.7, 0.7, 0.7), glm::vec3(0.1, 0.1, 0.1), 32.0),
+            material: material.unwrap_or_default(),
             vbo,
             vao,
             ebo,
@@ -151,10 +151,10 @@ impl Mesh {
         let model_mat = glm::ext::translate(&model_mat, glm::vec3(self.position.x, self.position.y, self.position.z));
         shader.set_mat4fv("model", &model_mat);
 
-        shader.set_3fv("material.ambient", self.material.ambient);
-        shader.set_3fv("material.diffuse", self.material.diffuse);
-        shader.set_3fv("material.specular", self.material.specular);
-        shader.set_float("material.shininess", self.material.shininess);
+        shader.set_3fv("material.ambient", self.material.ambient_color);
+        shader.set_3fv("material.diffuse", self.material.diffuse_color);
+        shader.set_3fv("material.specular", self.material.specular_color);
+        shader.set_float("material.shininess", self.material.specular_exponent);
 
         // for i in 0..self.textures.len() {
         //     unsafe {
@@ -248,29 +248,3 @@ impl Texture {
     }
 }
 
-#[derive(Debug)]
-pub struct Material {
-    pub name: String,
-    pub ambient: glm::Vec3,
-    pub diffuse: glm::Vec3,
-    pub specular: glm::Vec3,
-    pub shininess: f32,
-}
-
-impl Material {
-    pub fn new(name: String, ambient: glm::Vec3, diffuse: glm::Vec3, specular: glm::Vec3, shininess: f32) -> Self {
-        Material {
-            name,
-            ambient,
-            diffuse,
-            specular,
-            shininess,
-        }
-    }
-}
-
-impl std::fmt::Display for Material {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Ambient: {:?}\nDiffuse: {:?}\nSpecular: {:?}\nShininess: {}", self.ambient, self.diffuse, self.specular, self.shininess)
-    }
-}
