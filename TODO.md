@@ -26,5 +26,6 @@
      - only select the last one if we removed the selected model
  - [x] Use filename for the root node
  - [x] Ship shaders directly in the executable
+ - [ ] Have the program accept model files as CLI args
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)

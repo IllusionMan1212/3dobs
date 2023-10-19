@@ -1,9 +1,7 @@
-use std::path::PathBuf;
-
-use crate::{mesh::{Mesh, Vertex, Texture, Material, apply_rotation}, shader::Shader, utils, ui::ui, log, aabb, importer};
-
 use russimp;
 use anyhow::{Result, anyhow};
+
+use crate::{mesh::{Mesh, Vertex, Texture, apply_rotation}, shader::Shader, utils, ui::ui, log, aabb, importer};
 
 const SUPPORTED_TEXTURE_TYPES: [russimp::material::TextureType; 2] = [
     russimp::material::TextureType::Diffuse,
@@ -285,7 +283,7 @@ impl Model {
         let mut meshes = Vec::new();
 
         for mesh in obj.meshes.into_iter() {
-            meshes.push(Mesh::new(&mesh.name, mesh.vertices, mesh.indices));
+            meshes.push(Mesh::new(&mesh.name, mesh.vertices, mesh.indices, mesh.material));
         }
 
         Model {

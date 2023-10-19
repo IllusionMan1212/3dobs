@@ -1,10 +1,10 @@
-use std::io::{BufReader, BufRead};
+use std::{io::{BufReader, BufRead}, collections::HashMap, path::PathBuf};
 
-use crate::{mesh::Vertex, aabb::AABB, importer::ObjMesh, importer::Object};
+use crate::{mesh::Vertex, aabb::AABB, importer::ObjMesh, importer::Object, importer::Material};
 
 const BUF_CAP: usize = 1024 * 128; // 128 Kilobytes
 
-enum Token {
+enum ObjToken {
     Object,
     Group,
     Vertex,
@@ -18,26 +18,141 @@ enum Token {
     MaterialUsage,
 }
 
-impl Token {
-    fn from_str<'a>(s: &'a str) -> Option<Token> {
+impl ObjToken {
+    fn from_str<'a>(s: &'a str) -> Option<ObjToken> {
         match s {
-            "o" => Some(Token::Object),
-            "g" => Some(Token::Group),
-            "v" => Some(Token::Vertex),
-            "vn" => Some(Token::Normal),
-            "vt" => Some(Token::TexCoord),
-            "f" => Some(Token::Face),
-            "p" => Some(Token::Point),
-            "l" => Some(Token::Line),
-            "s" => Some(Token::SmoothShading),
-            "mtllib" => Some(Token::MaterialLib),
-            "usemtl" => Some(Token::MaterialUsage),
+            "o" => Some(ObjToken::Object),
+            "g" => Some(ObjToken::Group),
+            "v" => Some(ObjToken::Vertex),
+            "vn" => Some(ObjToken::Normal),
+            "vt" => Some(ObjToken::TexCoord),
+            "f" => Some(ObjToken::Face),
+            "p" => Some(ObjToken::Point),
+            "l" => Some(ObjToken::Line),
+            "s" => Some(ObjToken::SmoothShading),
+            "mtllib" => Some(ObjToken::MaterialLib),
+            "usemtl" => Some(ObjToken::MaterialUsage),
             _ => None,
         }
     }
 }
 
-pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error>> {
+enum MtlToken {
+    NewMaterial,
+    AmbientColor,
+    DiffuseColor,
+    SpecularColor,
+    Emissive,
+    SpecularExponent,
+    Refraction,
+    Opacity,
+    AmbientTexture,
+    DiffuseTexture,
+    SpecularTexture,
+    SpecularHighlightTexture,
+    EmissiveTexture,
+    BumpTexture,
+    DisplacementTexture,
+    DecalTexture,
+    ReflectionTexture,
+}
+
+impl MtlToken {
+    fn from_str(s: &str) -> Option<MtlToken> {
+        match s {
+            "newmtl" => Some(MtlToken::NewMaterial),
+            "Ka" => Some(MtlToken::AmbientColor),
+            "Kd" => Some(MtlToken::DiffuseColor),
+            "Ks" => Some(MtlToken::SpecularColor),
+            "Ke" => Some(MtlToken::Emissive),
+            "Ns" => Some(MtlToken::SpecularExponent),
+            "Ni" => Some(MtlToken::Refraction),
+            "d" => Some(MtlToken::Opacity),
+            "map_Ka" => Some(MtlToken::AmbientTexture),
+            "map_Kd" => Some(MtlToken::DiffuseTexture),
+            "map_Ks" => Some(MtlToken::SpecularTexture),
+            "map_Ns" => Some(MtlToken::SpecularHighlightTexture),
+            "map_Ke" => Some(MtlToken::EmissiveTexture),
+            "map_bump" => Some(MtlToken::BumpTexture),
+            "map_d" => Some(MtlToken::DisplacementTexture),
+            "decal" => Some(MtlToken::DecalTexture),
+            "refl" => Some(MtlToken::ReflectionTexture),
+            _ => None,
+        }
+    }
+}
+
+fn parse_mtl(path: &PathBuf) -> Result<HashMap<String, Material>, Box<dyn std::error::Error>> {
+    let file = std::fs::File::open(path)?;
+    let reader = BufReader::with_capacity(BUF_CAP, file);
+    let mut material_name = String::new();
+    let mut materials: HashMap<String, Material> = HashMap::new();
+    let mut material;
+    let mut ambient = glm::vec3(0.0, 0.0, 0.0);
+    let mut diffuse = glm::vec3(0.0, 0.0, 0.0);
+    let mut specular = glm::vec3(0.0, 0.0, 0.0);
+    let mut shininess = 32.0;
+    let mut opacity = 1.0;
+
+    for line in reader.lines() {
+        let line = line?;
+        // skip empty lines and comments
+        if line.is_empty() || line.chars().nth(0).is_some_and(|c| c == '#') {
+            continue;
+        }
+
+        let mut iter = line.split_ascii_whitespace();
+        let first = iter.next();
+        if let Some(token) = first {
+            match MtlToken::from_str(token) {
+                Some(MtlToken::NewMaterial) => {
+                    if !material_name.is_empty() {
+                        material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, HashMap::new());
+                        materials.insert(material_name, material);
+                    }
+
+                    material_name = iter.next().unwrap().to_string();
+                }
+                Some(MtlToken::AmbientColor) => {
+                    let r = iter.next().unwrap().parse::<f32>().unwrap();
+                    let g = iter.next().unwrap().parse::<f32>().unwrap();
+                    let b = iter.next().unwrap().parse::<f32>().unwrap();
+                    ambient = glm::vec3(r, g, b);
+                }
+                Some(MtlToken::DiffuseColor) => {
+                    let r = iter.next().unwrap().parse::<f32>().unwrap();
+                    let g = iter.next().unwrap().parse::<f32>().unwrap();
+                    let b = iter.next().unwrap().parse::<f32>().unwrap();
+                    diffuse = glm::vec3(r, g, b);
+                }
+                Some(MtlToken::SpecularColor) => {
+                    let r = iter.next().unwrap().parse::<f32>().unwrap();
+                    let g = iter.next().unwrap().parse::<f32>().unwrap();
+                    let b = iter.next().unwrap().parse::<f32>().unwrap();
+                    specular = glm::vec3(r, g, b);
+                }
+                Some(MtlToken::SpecularExponent) => {
+                    shininess = iter.next().unwrap().parse::<f32>().unwrap();
+                }
+                Some(MtlToken::Opacity) => {
+                    opacity = iter.next().unwrap().parse::<f32>().unwrap();
+                }
+                Some(MtlToken::DiffuseTexture) => {
+                    // TODO: textures
+                }
+                _ => { println!("Unhandled material token: {}", token) },
+            }
+        }
+    }
+
+    material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, HashMap::new());
+
+    materials.insert(material_name, material);
+
+    Ok(materials)
+}
+
+pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<dyn std::error::Error>> {
     let now = std::time::Instant::now();
     let reader = BufReader::with_capacity(BUF_CAP, file);
     let mut object_name = String::new();
@@ -49,6 +164,8 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
     let mut indices = Vec::new();
     let mut tex_coords = Vec::new();
     let mut meshes = Vec::new();
+    let mut materials: HashMap<String, Material> = HashMap::new();
+    let mut current_material: Option<Material> = None;
     let mut min_aabb = glm::vec3(std::f32::MAX, std::f32::MAX, std::f32::MAX);
     let mut max_aabb = glm::vec3(std::f32::MIN, std::f32::MIN, std::f32::MIN);
 
@@ -62,8 +179,8 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
         let mut iter = line.split_ascii_whitespace();
         let first = iter.next();
         if let Some(token) = first {
-            match Token::from_str(token) {
-                Some(Token::Object) => {
+            match ObjToken::from_str(token) {
+                Some(ObjToken::Object) => {
                     let name = {
                         if current_mesh_name.is_empty() {
                             object_name.clone()
@@ -76,6 +193,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                             name,
                             vertices: vertices.clone(),
                             indices: indices.clone(),
+                            material: current_material.clone()
                         });
                     }
                     vertices.clear();
@@ -84,7 +202,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
 
                     object_name = iter.next().unwrap_or("").to_string();
                 }
-                Some(Token::Group) => {
+                Some(ObjToken::Group) => {
                     let name = {
                         if current_mesh_name.is_empty() {
                             object_name.clone()
@@ -97,6 +215,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                             name,
                             vertices: vertices.clone(),
                             indices: indices.clone(),
+                            material: current_material.clone()
                         });
                     }
                     vertices.clear();
@@ -105,7 +224,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
 
                     current_mesh_name = iter.next().unwrap_or("default_mesh").to_string();
                 }
-                Some(Token::Vertex) => {
+                Some(ObjToken::Vertex) => {
                     let mut iter = iter
                         .take(3)
                         .map(|i| i.parse::<f32>().unwrap());
@@ -138,7 +257,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                     }
 
                 }
-                Some(Token::Normal) => {
+                Some(ObjToken::Normal) => {
                     let mut iter = iter
                         .take(3)
                         .map(|i| i.parse::<f32>().unwrap());
@@ -147,7 +266,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                     let z = iter.next().unwrap();
                     normals.push(glm::vec3(x, y, z));
                 }
-                Some(Token::TexCoord) => {
+                Some(ObjToken::TexCoord) => {
                     let mut iter = iter
                         .take(2)
                         .map(|i| i.parse::<f32>().unwrap());
@@ -155,16 +274,20 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                     let v = iter.next().unwrap();
                     tex_coords.push(glm::vec2(u, v));
                 }
-                Some(Token::Face) => {
+                Some(ObjToken::Face) => {
                     // TODO: vertex indices can be negative
 
                     let face = iter.collect::<Vec<_>>();
                     let mut calculated_normal = glm::vec3(0.0, 0.0, 0.0);
 
                     if normals.is_empty() {
+                        let part0 = face[0].split("/").next().unwrap();
+                        let part1 = face[1].split("/").next().unwrap();
+                        let part2 = face[2].split("/").next().unwrap();
+
                         calculated_normal = glm::normalize(glm::cross(
-                            temp_vertices[face[1].parse::<i32>().unwrap() as usize - 1] - temp_vertices[face[0].parse::<i32>().unwrap() as usize - 1],
-                            temp_vertices[face[2].parse::<i32>().unwrap() as usize - 1] - temp_vertices[face[0].parse::<i32>().unwrap() as usize - 1]
+                            temp_vertices[part1.parse::<i32>().unwrap() as usize - 1] - temp_vertices[part0.parse::<i32>().unwrap() as usize - 1],
+                            temp_vertices[part2.parse::<i32>().unwrap() as usize - 1] - temp_vertices[part0.parse::<i32>().unwrap() as usize - 1]
                         ));
                     }
 
@@ -178,7 +301,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                                 normal: *normals.get(normal as usize).unwrap(),
                                 tex_coords: glm::vec2(0.0, 0.0)
                             });
-                        } else if vert.contains("/") {
+                        } else if vert.matches("/").count() == 2 {
                             let mut it = vert.split("/");
                             let vertex = it.next().unwrap().parse::<i32>().unwrap() - 1;
                             let t_coords = it.next().unwrap().parse::<i32>().unwrap() - 1;
@@ -186,6 +309,15 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
+                                tex_coords: *tex_coords.get(t_coords as usize).unwrap()
+                            });
+                        } else if vert.matches("/").count() == 1 {
+                            let mut it = vert.split("/");
+                            let vertex = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let t_coords = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            vertices.push(Vertex{
+                                position: *temp_vertices.get(vertex as usize).unwrap(),
+                                normal: calculated_normal,
                                 tex_coords: *tex_coords.get(t_coords as usize).unwrap()
                             });
                         } else {
@@ -207,15 +339,48 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
 
                     indices_counter += face.len() as u32;
                 }
-                Some(Token::MaterialLib) => {
-                    // TODO: handle material file
+                Some(ObjToken::MaterialLib) => {
+                    let material_path = obj_path.parent().unwrap().join(iter.next().unwrap_or(""));
+                    let new_materials = parse_mtl(&material_path);
+                    match new_materials {
+                        Ok(m) => {
+                            materials.extend(m);
+                        },
+                        Err(e) => {
+                            eprintln!("Failed to parse mtl file {:?}: {}", material_path, e);
+                        }
+                    }
                 }
-                Some(Token::MaterialUsage) => {
-                    // TODO: handle material usage
-                    // this can be used multiple times before f is mentioned
-                    // to apply the material to those faces after it
+                Some(ObjToken::MaterialUsage) => {
+                    // Split into meshes by material usage
+                    let name = {
+                        if current_mesh_name.is_empty() && !object_name.is_empty() {
+                            object_name.clone()
+                        } else if !current_mesh_name.is_empty() {
+                            current_mesh_name.clone()
+                        } else {
+                            "default_mesh".to_string()
+                        }
+                    };
+                    if !vertices.is_empty() {
+                        meshes.push(ObjMesh{
+                            name,
+                            vertices: vertices.clone(),
+                            indices: indices.clone(),
+                            material: current_material.clone()
+                        });
+                    }
+                    vertices.clear();
+                    indices.clear();
+                    indices_counter = 0;
+
+                    let mat_name = iter.next().unwrap_or("").to_string();
+                    current_material = materials.get(&mat_name).cloned();
                 }
-                _ => {},
+                Some(ObjToken::Line) | Some(ObjToken::Point) => {
+                    // we don't handle lines or points
+                }
+                _ => { println!("Unhandled obj token: {}", token) },
             }
         }
     }
@@ -236,6 +401,7 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
         name: mesh_name,
         vertices: vertices.clone(),
         indices: indices.clone(),
+        material: current_material
     });
 
     let aabb = AABB::new(min_aabb, max_aabb);
@@ -243,6 +409,6 @@ pub fn load_obj(file: std::fs::File) -> Result<Object, Box<dyn std::error::Error
     Ok(Object{
         name: object_name,
         meshes,
-        aabb
+        aabb,
     })
 }
