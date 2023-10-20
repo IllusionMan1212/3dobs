@@ -1,8 +1,9 @@
 mod obj;
+mod stl;
 
 use std::{path::PathBuf, collections::HashMap};
 
-use crate::{mesh::Vertex, aabb::AABB};
+use crate::{mesh::Vertex, aabb::AABB, utils::SupportedFileExtensions};
 
 #[derive(Debug, Clone)]
 pub enum TextureType {
@@ -86,13 +87,20 @@ pub struct Object {
 }
 
 pub fn load_from_file(path: &PathBuf) -> Result<Object, Box<dyn std::error::Error>> {
-    // FIXME: don't explode if to_str() fails
-    let path_str = path.to_str().unwrap();
+    let path_str = match path.to_str() {
+        Some(s) => s,
+        None => return Err("Failed to convert path to string".into())
+    };
+
     let file = std::fs::File::open(path_str)?;
-    // TODO: support both stl and obj based on file extension
-    // if no extension, then test for binary STL magic bytes 
+    // TODO: if no extension, then test for binary STL magic bytes 
     // if no magic bytes, then try to guess based on the first line of text in the file
 
-    let obj = obj::load_obj(path, file)?;
+    let obj = match SupportedFileExtensions::from_str(path.extension().unwrap().to_str().unwrap()) {
+        Some(SupportedFileExtensions::STL) => stl::load_stl(file)?,
+        Some(SupportedFileExtensions::OBJ) => obj::load_obj(path, file)?,
+        _ => panic!("Unsupported file extension: {}", path_str),
+    };
+
     Ok(obj)
 }

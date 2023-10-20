@@ -6,7 +6,20 @@ use anyhow::{Result, Context};
 
 use crate::{log, model, ui, importer};
 
-const SUPPORTED_FILE_EXTENSIONS: [&str; 2] = ["obj", "stl"];
+pub enum SupportedFileExtensions {
+    OBJ,
+    STL
+}
+
+impl SupportedFileExtensions {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_ascii_lowercase().as_str() {
+            "obj" => Some(Self::OBJ),
+            "stl" => Some(Self::STL),
+            _ => None
+        }
+    }
+}
 
 pub fn load_texture(path: &str) -> Result<u32> {
     let tex = image::io::Reader::open(path)
@@ -56,9 +69,15 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
             state.logger.log(&format!("Skipping directory \"{}\"", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
             continue;
         }
-        if let Some(ext) = model_path.extension() {
-            if !SUPPORTED_FILE_EXTENSIONS.contains(&ext.to_ascii_lowercase().to_str().unwrap()) {
-                state.logger.log(&format!("Skipping file \"{}\" because it is not an OBJ or STL file", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+        match model_path.extension() {
+            Some(ext) => {
+                if SupportedFileExtensions::from_str(ext.to_str().unwrap()).is_none() {
+                    state.logger.log(&format!("Skipping file \"{}\" because it is not an OBJ or STL file", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+                    continue;
+                }
+            },
+            None => {
+                state.logger.log(&format!("Skipping file \"{}\" because it has no extension", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
                 continue;
             }
         }
