@@ -2,6 +2,7 @@
  - [x] Help menu
      - [x] About window
  - [ ] File logger
+ - [ ] Logger should log to file, console and stdout
  - [x] Move console to be under objects
  - [x] Don't have the viewport window be scrollable
  - [x] Object rotation with left click + mouse movement (very rudimentary implementation, but works)
