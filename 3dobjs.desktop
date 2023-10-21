@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=3DObjs
+GenericName=3D Viewer
+Type=Application
+Version=0.1
+Exec=~/.local/bin/threedobs %F
+Terminal=false
+PrefersNonDefaultGPU=true
+Comment=View STL & OBJ Files
+Categories=Development;Graphics;Utility;3DGraphics;Viewer;Printing;Art;FileTools
+
+
+# Sample .desktop file for now. We will add an installer for this in the future
