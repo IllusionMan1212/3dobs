@@ -20,7 +20,3 @@ rfd = "0.11.3"
 [dependencies.imgui]
 version = "0.11.0"
 features = ["docking", "tables-api"]
-
-[dependencies.russimp]
-version = "2.0.6"
-features = ["prebuilt"]

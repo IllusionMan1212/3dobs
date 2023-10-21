@@ -1,50 +1,6 @@
 use glad_gl::gl;
-use anyhow::Result;
 
 use crate::{shader::Shader, utils, importer::Material};
-
-fn decompose_mat(matrix: &mut glm::Mat4) -> (glm::Vec3, glm::Vec3, glm::Vec3) {
-    let pos = glm::vec3(matrix.c0.w, matrix.c1.w, matrix.c2.w);
-    matrix.c3.x = 0.0;
-    matrix.c3.y = 0.0;
-    matrix.c3.z = 0.0;
-
-    let scale_x = glm::length(glm::vec3(matrix.c0.x, matrix.c1.x, matrix.c2.x));
-    let scale_y = glm::length(glm::vec3(matrix.c0.y, matrix.c1.y, matrix.c2.y));
-    let scale_z = glm::length(glm::vec3(matrix.c0.z, matrix.c1.z, matrix.c2.z));
-    let scale = glm::vec3(scale_x, scale_y, scale_z);
-
-    let matrix = glm::mat3(
-        matrix[0][0] / scale_x, matrix[0][1] / scale_y, matrix[0][2] / scale_z,
-        matrix[1][0] / scale_x, matrix[1][1] / scale_y, matrix[1][2] / scale_z,
-        matrix[2][0] / scale_x, matrix[2][1] / scale_y, matrix[2][2] / scale_z,
-    );
-
-    let mut pitch = 0.0;
-    let mut yaw = 0.0;
-    let mut roll = 0.0;
-
-    // source: https://www.geometrictools.com/Documentation/EulerAngles.pdf
-    if matrix[0][2] < 1.0 {
-        if matrix[0][2] > -1.0 {
-            pitch = (-matrix[1][2]).atan2(matrix[2][2]).to_degrees();
-            yaw = matrix[0][2].asin().to_degrees();
-            roll = (-matrix[0][1]).atan2(matrix[0][0]).to_degrees();
-        } else {
-            pitch = -(matrix[1][0].atan2(matrix[1][1])).to_degrees();
-            yaw = -(std::f32::consts::FRAC_PI_2).to_degrees();
-            roll = 0.0;
-        }
-    } else {
-        pitch = matrix[1][0].atan2(matrix[1][1]).to_degrees();
-        yaw = std::f32::consts::FRAC_PI_2.to_degrees();
-        roll = 0.0;
-    }
-
-    let rotation = glm::vec3(pitch, yaw, roll);
-
-    (pos, rotation, scale)
-}
 
 fn create_rotation_matrix(pitch: f32, yaw: f32, roll: f32, pivot: glm::Vec3) -> glm::Mat4 {
     let pitch = pitch.to_radians();
@@ -121,8 +77,6 @@ impl Mesh {
 
             gl::BindVertexArray(0);
         }
-
-        // let (position, rotation, scale) = decompose_mat(transformation);
 
         Mesh {
             name: name.to_string(),
@@ -225,26 +179,26 @@ impl Vertex {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Texture {
-    pub id: u32,
-    pub typ: russimp::material::TextureType,
-    pub path: std::path::PathBuf,
-}
+// #[derive(Clone, Debug)]
+// pub struct Texture {
+//     pub id: u32,
+//     pub typ: russimp::material::TextureType,
+//     pub path: std::path::PathBuf,
+// }
 
-impl Texture {
-    pub fn new(path: std::path::PathBuf, typ: russimp::material::TextureType) -> Result<Self, Box<dyn std::error::Error>> {
-        let path_str = match path.to_str() {
-            Some(path) => path,
-            None => return Err("Failed to convert texture path to string".into()),
-        };
-        let id = utils::load_texture(path_str)?;
+// impl Texture {
+//     pub fn new(path: std::path::PathBuf, typ: russimp::material::TextureType) -> Result<Self, Box<dyn std::error::Error>> {
+//         let path_str = match path.to_str() {
+//             Some(path) => path,
+//             None => return Err("Failed to convert texture path to string".into()),
+//         };
+//         let id = utils::load_texture(path_str)?;
 
-        Ok(Texture {
-            id,
-            typ,
-            path,
-        })
-    }
-}
+//         Ok(Texture {
+//             id,
+//             typ,
+//             path,
+//         })
+//     }
+// }
 
