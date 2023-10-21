@@ -229,7 +229,7 @@ pub fn load_stl(mut file: std::fs::File) -> Result<Object, Box<dyn std::error::E
         parse_binary_stl(file)?
     };
     let elapsed = now.elapsed();
-    println!("STL file loaded in {} µs", elapsed.as_micros());
+    println!("Loaded in {} ms", elapsed.as_millis());
 
     Ok(obj)
 }

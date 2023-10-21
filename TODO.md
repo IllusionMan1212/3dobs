@@ -30,5 +30,6 @@
  - [ ] Have the program accept model files as CLI args
  - [ ] Have it so that when an instance of 3dobs is open, any other file associated with 3dobs is opened in the same instance
  - [ ] Show how many memory each loaded model is using
+ - [ ] Move the invisible point lights to be around selected object from all sides so it's nicely illuminated
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)
