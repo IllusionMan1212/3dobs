@@ -18,6 +18,7 @@ pub enum TextureType {
     Emissive
 }
 
+// TODO: take the textures out of the material and put it on the model/object
 #[derive(Debug, Clone)]
 pub struct Material {
     pub name: String,

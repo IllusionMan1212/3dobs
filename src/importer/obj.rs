@@ -232,29 +232,9 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                     let y = iter.next().unwrap();
                     let z = iter.next().unwrap();
                     temp_vertices.push(glm::vec3(x, y, z));
-                    if x < min_aabb.x {
-                        min_aabb.x = x;
-                    }
 
-                    if y < min_aabb.y {
-                        min_aabb.y = y;
-                    }
-
-                    if z < min_aabb.z {
-                        min_aabb.z = z;
-                    }
-
-                    if x > max_aabb.x {
-                        max_aabb.x = x;
-                    }
-
-                    if y > max_aabb.y {
-                        max_aabb.y = y;
-                    }
-
-                    if z > max_aabb.z {
-                        max_aabb.z = z;
-                    }
+                    min_aabb = glm::vec3(min_aabb.x.min(x), min_aabb.y.min(y), min_aabb.z.min(z));
+                    max_aabb = glm::vec3(max_aabb.x.max(x), max_aabb.y.max(y), max_aabb.z.max(z));
 
                 }
                 Some(ObjToken::Normal) => {

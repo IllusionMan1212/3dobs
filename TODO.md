@@ -28,5 +28,7 @@
  - [x] Use filename for the root node
  - [x] Ship shaders directly in the executable
  - [ ] Have the program accept model files as CLI args
+ - [ ] Have it so that when an instance of 3dobs is open, any other file associated with 3dobs is opened in the same instance
+ - [ ] Show how many memory each loaded model is using
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)
