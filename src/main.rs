@@ -1,7 +1,8 @@
 use glfw::{Action, Context, Key, Modifiers};
 use glad_gl::gl;
 use anyhow;
-
+use std::env;
+use std::path::PathBuf;
 use threedobs::{shader, ui::ui, utils};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
@@ -182,6 +183,17 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         mesh_shader.set_3fv("dirLight.specular", glm::vec3(1.0, 1.0, 1.0));
 
         let scene_fb = create_scene_framebuffer();
+
+        // Import models from launch arguments
+        let args: Vec<String> = env::args().collect();
+        if args.len() > 1 {
+            let paths: Vec<PathBuf> = args
+            .iter()
+            .skip(1)
+            .map(|arg| PathBuf::from(arg))
+            .collect();
+            utils::import_models_from_paths(&paths, &mut state);
+        }
 
         // main loop
         while !window.should_close() {
