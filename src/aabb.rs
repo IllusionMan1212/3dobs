@@ -8,6 +8,8 @@ pub struct AABB {
     pub max: glm::Vec3,
     indices_len: u32,
     vao: u32,
+    vbo: u32,
+    ebo: u32,
 }
 
 impl AABB {
@@ -69,6 +71,8 @@ impl AABB {
             max,
             indices_len: indices.len() as u32,
             vao,
+            vbo,
+            ebo
         }
     }
 
@@ -85,6 +89,17 @@ impl AABB {
 
             // reset stuff to default
             gl::BindVertexArray(0);
+        }
+    }
+}
+
+impl Drop for AABB {
+    fn drop(&mut self) {
+        unsafe {
+            gl::BindVertexArray(0);
+            gl::DeleteBuffers(1, &self.vbo);
+            gl::DeleteBuffers(1, &self.ebo);
+            gl::DeleteVertexArrays(1, &self.vao);
         }
     }
 }
