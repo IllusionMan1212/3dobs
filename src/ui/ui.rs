@@ -417,7 +417,7 @@ pub fn draw_ui(
             .position_pivot([0.5, 0.5])
             .build(|| {
                 ui.text("3dobs - 3D Object Browser");
-                ui.text(format!("Version: {}-{}", env!("CARGO_PKG_VERSION"), option_env!("GIT_HASH").unwrap_or("unknown")));
+                ui.text(format!("Version: {}-{}", env!("CARGO_PKG_VERSION"), env!("GIT_HASH")));
                 ui.text(format!("{}", env!("CARGO_PKG_DESCRIPTION")));
                 ui.spacing();
                 ui.spacing();
