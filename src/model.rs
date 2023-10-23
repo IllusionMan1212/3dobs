@@ -9,6 +9,7 @@ pub struct Model {
     pub meshes: Vec<Mesh>,
     pub aabb: aabb::AABB,
     pub scaling_factor: f32,
+    pub mem_usage: usize,
 }
 
 // TODO: texture support, kept for reference
@@ -75,13 +76,18 @@ impl Model {
             meshes.push(Mesh::new(&mesh.name, mesh.vertices, mesh.indices, mesh.material));
         }
 
-        Model {
+        let mut model = Model {
             id: state.get_next_id(),
             name: obj.name.to_owned(),
             aabb: obj.aabb,
             scaling_factor: scale,
             meshes,
-        }
+            mem_usage: 0,
+        };
+
+        model.set_mem_usage();
+
+        return model;
     }
 
     pub fn draw(&self, shader: &Shader, draw_aabb: bool) {
@@ -117,5 +123,27 @@ impl Model {
             mesh.reset_rotation();
         }
         self
+    }
+
+    fn set_mem_usage(&mut self) {
+        let mut size: usize = 0;
+
+        size += std::mem::size_of_val(self);
+        for mesh in &self.meshes {
+            size += std::mem::size_of_val(mesh);
+            size += std::mem::size_of::<importer::Material>();
+
+            for texture in &mesh.material.textures {
+                size += std::mem::size_of_val(&texture);
+            }
+            for vertex in &mesh.vertices {
+                size += std::mem::size_of_val(vertex);
+            }
+            for index in &mesh.indices {
+                size += std::mem::size_of_val(index);
+            }
+        }
+
+        self.mem_usage = size;
     }
 }

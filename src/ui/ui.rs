@@ -116,10 +116,11 @@ pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::
                 state.show_help_menu_about = !state.show_help_menu_about;
             }
         });
-        let fps = format!("FPS: {:.1}", 1.0 / delta_time);
-        let avail_size = [*ui.content_region_avail().get(0).unwrap() - ui.calc_text_size(&fps)[0], 0.0];
+        let mem = state.objects.iter().fold(0 as usize, |acc, m| acc + m.mem_usage) as f32;
+        let mem_fps = format!("Mem: {:.1}MB | FPS: {:.1}", mem / (1024.0 * 1024.0), 1.0 / delta_time);
+        let avail_size = [*ui.content_region_avail().get(0).unwrap() - ui.calc_text_size(&mem_fps)[0], 0.0];
         ui.dummy(avail_size);
-        ui.text(&fps);
+        ui.text(&mem_fps);
     });
 }
 
@@ -169,7 +170,7 @@ fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool 
     if let Some(..) = ui.begin_table_with_sizing("Objects Table", 2, imgui::TableFlags::SIZING_STRETCH_PROP, [0.0, 0.0], 0.0) {
         ui.table_next_row();
         ui.table_next_column();
-        ui.tree_node_config(format!("{}###{}", object.name.as_str(), idx))
+        ui.tree_node_config(format!("{} ({:.1}MB)###{}", object.name.as_str(), object.mem_usage as f32 / (1024.0 * 1024.0), idx))
             .build(|| {
                 for (j, mesh) in &mut object.meshes.iter_mut().enumerate() {
                     draw_mesh_hierarchy(ui, mesh, j);

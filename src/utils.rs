@@ -88,7 +88,9 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
 
                 state.active_model = Some(m.id);
                 if let Some(model_name) = filename {
-                    state.logger.log(&format!("Loaded model \"{}\"", model_name.to_str().unwrap()), log::LogLevel::Info);
+                    let msg = format!("Loaded model \"{}\"", model_name.to_str().unwrap());
+                    println!("{}", msg);
+                    state.logger.log(&msg, log::LogLevel::Info);
                     m.name = model_name.to_str().unwrap().to_string();
                 }
                 state.objects.push(m);

@@ -166,8 +166,8 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
     let mut meshes = Vec::new();
     let mut materials: HashMap<String, Material> = HashMap::new();
     let mut current_material: Option<Material> = None;
-    let mut min_aabb = glm::vec3(std::f32::MAX, std::f32::MAX, std::f32::MAX);
-    let mut max_aabb = glm::vec3(std::f32::MIN, std::f32::MIN, std::f32::MIN);
+    let mut min_aabb = glm::vec3(f32::MAX, f32::MAX, f32::MAX);
+    let mut max_aabb = glm::vec3(f32::MIN, f32::MIN, f32::MIN);
 
     for line in reader.lines() {
         let line = line?;
