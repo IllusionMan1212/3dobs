@@ -11,3 +11,4 @@ pub mod ui;
 pub mod log;
 pub mod aabb;
 pub mod importer;
+pub mod ipc;

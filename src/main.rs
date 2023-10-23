@@ -1,11 +1,25 @@
 use glfw::{Action, Context, Key, Modifiers};
 use glad_gl::gl;
 use anyhow;
+use std::fs::File;
 use std::env;
 use std::path::PathBuf;
-use threedobs::{shader, ui::ui, utils};
+
+use threedobs::{shader, ui::ui, utils, ipc};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
+    let args: Vec<String> = env::args().collect();
+    let args_paths: Vec<PathBuf> = args
+        .iter()
+        .skip(1)
+        .map(|arg| std::fs::canonicalize(PathBuf::from(arg)).unwrap())
+        .collect();
+
+    let lock_file_name = "3dobs.lock";
+    let lock_file_path = std::env::temp_dir().join(lock_file_name);
+    let lock_file = File::create(&lock_file_path)?;
+    let ipc_rx = ipc::init(&lock_file, args_paths.clone());
+
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
 
     glfw::WindowHint::ContextVersion(3, 3);
@@ -184,15 +198,8 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
         let scene_fb = create_scene_framebuffer();
 
-        // Import models from launch arguments
-        let args: Vec<String> = env::args().collect();
         if args.len() > 1 {
-            let paths: Vec<PathBuf> = args
-            .iter()
-            .skip(1)
-            .map(|arg| PathBuf::from(arg))
-            .collect();
-            utils::import_models_from_paths(&paths, &mut state);
+            utils::import_models_from_paths(&args_paths, &mut state);
         }
 
         // main loop
@@ -208,6 +215,21 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             // camera matrices
             let view_mat = glm::ext::look_at(state.camera.position, state.camera.position + state.camera.front, state.camera.up);
             let projection_mat = glm::ext::perspective(glm::radians(state.camera.fov), state.viewport_size[0] / state.viewport_size[1], 0.01, 200.0);
+
+            match ipc_rx.try_recv() {
+                Ok(paths) => {
+                    window.focus();
+                    utils::import_models_from_paths(&paths, &mut state);
+                },
+                Err(e) => {
+                    match e {
+                        std::sync::mpsc::TryRecvError::Empty => {},
+                        std::sync::mpsc::TryRecvError::Disconnected => {
+                            panic!("Error: IPC thread channel disconnected");
+                        }
+                    }
+                }
+            }
 
             for (_, event) in glfw::flush_messages(&events) {
                 // order of handling events is important here
@@ -236,10 +258,10 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
                                 state.camera.move_camera(xoffset, yoffset);
                             } else {
                                 if let Some(active_model) = state.active_model {
-                                    let model = state.objects.iter_mut().find(|m| m.id == active_model).unwrap();
-                                    // let x_rotation = glm::quat_angle_axis(xoffset * state.camera.sensitivity, &state.camera.up);
                                     let x_rotation = xoffset * state.camera.sensitivity * state.rotation_speed;
                                     let y_rotation = yoffset * state.camera.sensitivity * state.rotation_speed;
+                                    let model = state.objects.iter_mut().find(|m| m.id == active_model).unwrap();
+                                    // let x_rotation = glm::quat_angle_axis(xoffset * state.camera.sensitivity, &state.camera.up);
                                     model.rotate(x_rotation, y_rotation);
                                 }
                             }

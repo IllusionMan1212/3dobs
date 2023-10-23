@@ -19,7 +19,7 @@
  - [x] Smaller console area
  - [ ] Better object rotation
  - [ ] Ability to change rotation pivot point (needs raycasting and shit)
- - [ ] There might be memory leaks somewhere (tracked it down to russimp, will have to write my own .obj and .stl readers)
+ - [x] There might be memory leaks somewhere (tracked it down to russimp, will have to write my own .obj and .stl readers)
  - [x] Reset object rotation when changing active model
  - [x] Drag'n'Drop models
  - [ ] Config for consistent settings between restarts (home dir preferred)
@@ -27,9 +27,10 @@
      - only select the last one if we removed the selected model
  - [x] Use filename for the root node
  - [x] Ship shaders directly in the executable
- - [ ] Have the program accept model files as CLI args
- - [ ] Have it so that when an instance of 3dobs is open, any other file associated with 3dobs is opened in the same instance
- - [ ] Show how many memory each loaded model is using
+ - [x] Have the program accept model files as CLI args
+ - [x] Have it so that when an instance of 3dobs is open, any other file associated with 3dobs is opened in the same instance
+ - [ ] Toggle for dis/allowing the one instance option
+ - [x] Show how much memory each loaded model is using
  - [ ] Move the invisible point lights to be around selected object from all sides so it's nicely illuminated
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)
