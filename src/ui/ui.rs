@@ -1,13 +1,20 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use glad_gl::gl;
+use serde::{Serialize, Deserialize};
 
 use crate::{camera::Camera, model, imgui_glfw_support, imgui_opengl_renderer, mesh, ui, log, utils};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
+pub struct Settings {
+    pub one_instance: bool,
+}
 
 pub struct State {
     pub active_model: Option<u32>,
     pub show_console: bool,
     pub show_help_menu_about: bool,
+    pub show_settings: bool,
     pub is_cursor_captured: bool,
     pub can_capture_cursor: bool,
     pub draw_grid: bool,
@@ -20,6 +27,7 @@ pub struct State {
     pub objects: Vec<model::Model>,
     pub viewport_size: [f32; 2],
     pub logger: log::Log,
+    pub settings: Settings,
 }
 
 impl Default for State {
@@ -27,6 +35,8 @@ impl Default for State {
         Self {
             active_model: None,
             show_console: false,
+            show_help_menu_about: false,
+            show_settings: false,
             first_frame_drawn: false,
             is_cursor_captured: false,
             can_capture_cursor: false,
@@ -34,12 +44,12 @@ impl Default for State {
             draw_aabb: false,
             fov_zoom: true,
             rotation_speed: 1.0,
-            show_help_menu_about: false,
             wireframe: false,
             camera: Camera::new(),
             objects: vec![],
             viewport_size: [0.0, 0.0],
             logger: log::Log::default(),
+            settings: Settings::default(),
         }
     }
 }
@@ -102,6 +112,9 @@ pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::
             if ui.menu_item_config("Import Model(s)").shortcut("Ctrl+O").build() {
                 import_model(state);
             }
+            if ui.menu_item_config("Settings").build() {
+                state.show_settings = !state.show_settings;
+            }
             if ui.menu_item_config("Quit").shortcut("Ctrl+Q").build() {
                 window.set_should_close(true);
             }
@@ -122,6 +135,24 @@ pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::
         ui.dummy(avail_size);
         ui.text(&mem_fps);
     });
+}
+
+pub fn draw_settings_window(ui: &imgui::Ui, state: &mut State) {
+    if !state.show_settings {
+        return;
+    }
+    let display_size = ui.io().display_size;
+
+    ui.window("Settings")
+        .size([500.0, 100.0], imgui::Condition::FirstUseEver)
+        .opened(&mut state.show_settings)
+        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::FirstUseEver)
+        .position_pivot([0.5, 0.5])
+        .build(|| {
+            if ui.checkbox("Only allow one program instance (Reboot required when enabling)", &mut state.settings.one_instance) {
+                confy::store("3dobs", "settings", state.settings.clone()).unwrap();
+            }
+        });
 }
 
 fn draw_transformations(ui: &imgui::Ui, mesh: &mut mesh::Mesh) {
@@ -428,6 +459,7 @@ pub fn draw_ui(
     draw_viewport(ui, state, scene_fb_texture);
     draw_objects_window(ui, state);
     draw_console(ui, state);
+    draw_settings_window(ui, state);
 
     ui.end_frame_early();
 

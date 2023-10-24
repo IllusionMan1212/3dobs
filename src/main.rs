@@ -8,6 +8,8 @@ use std::path::PathBuf;
 use threedobs::{shader, ui::ui, utils, ipc};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
+    let settings: ui::Settings = confy::load("3dobs", "settings")?;
+
     let args: Vec<String> = env::args().collect();
     let args_paths: Vec<PathBuf> = args
         .iter()
@@ -18,7 +20,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     let lock_file_name = "3dobs.lock";
     let lock_file_path = std::env::temp_dir().join(lock_file_name);
     let lock_file = File::create(&lock_file_path)?;
-    let ipc_rx = ipc::init(&lock_file, args_paths.clone());
+    let ipc_rx = ipc::init(&lock_file, args_paths.clone(), settings.one_instance);
 
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
 
@@ -32,7 +34,10 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     window.set_cursor_mode(glfw::CursorMode::Disabled);
     window.make_current();
 
-    let mut state = ui::State::default();
+    let mut state = ui::State{
+        settings,
+        ..Default::default()
+    };
 
     glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
 
@@ -128,20 +133,23 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             let view_mat = glm::ext::look_at(state.camera.position, state.camera.position + state.camera.front, state.camera.up);
             let projection_mat = glm::ext::perspective(glm::radians(state.camera.fov), state.viewport_size[0] / state.viewport_size[1], 0.01, 200.0);
 
-            match ipc_rx.try_recv() {
-                Ok(paths) => {
-                    window.focus();
-                    utils::import_models_from_paths(&paths, &mut state);
-                },
-                Err(e) => {
-                    match e {
-                        std::sync::mpsc::TryRecvError::Empty => {},
-                        std::sync::mpsc::TryRecvError::Disconnected => {
-                            panic!("Error: IPC thread channel disconnected");
+            if let Some(rx) = &ipc_rx {
+                match rx.try_recv() {
+                    Ok(paths) => {
+                        window.focus();
+                        utils::import_models_from_paths(&paths, &mut state);
+                    },
+                    Err(e) => {
+                        match e {
+                            std::sync::mpsc::TryRecvError::Empty => {},
+                            std::sync::mpsc::TryRecvError::Disconnected => {
+                                panic!("Error: IPC thread channel disconnected");
+                            }
                         }
                     }
                 }
             }
+            
 
             for (_, event) in glfw::flush_messages(&events) {
                 // order of handling events is important here

@@ -22,14 +22,14 @@
  - [x] There might be memory leaks somewhere (tracked it down to russimp, will have to write my own .obj and .stl readers)
  - [x] Reset object rotation when changing active model
  - [x] Drag'n'Drop models
- - [ ] Config for consistent settings between restarts (home dir preferred)
+ - [x] Config for consistent settings between restarts (home dir preferred)
  - [x] (BUG) when removing a model that's not selected and the selected model is not the last, we select the last one
      - only select the last one if we removed the selected model
  - [x] Use filename for the root node
  - [x] Ship shaders directly in the executable
  - [x] Have the program accept model files as CLI args
  - [x] Have it so that when an instance of 3dobs is open, any other file associated with 3dobs is opened in the same instance
- - [ ] Toggle for dis/allowing the one instance option
+ - [x] Toggle for dis/allowing the one instance option
  - [x] Show how much memory each loaded model is using
  - [ ] Move the invisible point lights to be around selected object from all sides so it's nicely illuminated
 

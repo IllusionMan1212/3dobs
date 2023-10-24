@@ -22,3 +22,12 @@ fs4 = "0.7.0"
 [dependencies.imgui]
 version = "0.11.0"
 features = ["docking", "tables-api"]
+
+[dependencies.confy]
+version = "0.5.1"
+features = ["ron_conf"]
+default-features = false
+
+[dependencies.serde]
+version = "1.0.189"
+features = ["derive"]

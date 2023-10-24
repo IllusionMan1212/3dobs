@@ -23,7 +23,11 @@ fn send_args_to_existing_instance(pipe_path: PathBuf, args_paths: Vec<PathBuf>) 
         .expect("Failed to send arguments");
 }
 
-pub fn init(lock_file: &File, args_paths: Vec<PathBuf>) -> Receiver<Vec<PathBuf>> {
+pub fn init(lock_file: &File, args_paths: Vec<PathBuf>, one_instance: bool) -> Option<Receiver<Vec<PathBuf>>> {
+    if !one_instance {
+        return None;
+    }
+
     let pipe_name = "3dobs_pipe";
 
     let pipe_path = std::env::temp_dir().join(pipe_name);
@@ -61,5 +65,5 @@ pub fn init(lock_file: &File, args_paths: Vec<PathBuf>) -> Receiver<Vec<PathBuf>
         }
     });
 
-    ipc_rx
+    Some(ipc_rx)
 }
