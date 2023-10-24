@@ -188,7 +188,7 @@ fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool 
         if ui.checkbox("Selected", &mut (Some(state.objects[idx].id) == state.active_model)) {
             state.objects[idx].reset_rotation();
             state.active_model = Some(state.objects[idx].id);
-            state.camera.update_position(state.active_model, &state.objects);
+            state.camera.focus_on_selected_model(state.active_model, &state.objects);
         }
     }
 
@@ -208,7 +208,7 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
                     if state.active_model == Some(selected_obj_id) {
                         let model = state.objects.last_mut().map(|m| m.reset_rotation());
                         state.active_model = model.and_then(|o| Some(o.id));
-                        state.camera.update_position(state.active_model, &state.objects);
+                        state.camera.focus_on_selected_model(state.active_model, &state.objects);
                     }
                     continue;
                 }
@@ -307,7 +307,7 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
             state.viewport_size = tex_size;
 
             if ui.button("Reset Camera") {
-                state.camera.update_position(state.active_model, &state.objects);
+                state.camera.focus_on_selected_model(state.active_model, &state.objects);
             }
             ui.same_line();
             if ui.button("Capture Scene") {

@@ -105,8 +105,14 @@ impl Mesh {
         let model_mat = glm::ext::translate(&model_mat, glm::vec3(self.position.x, self.position.y, self.position.z));
         shader.set_mat4fv("model", &model_mat);
 
-        shader.set_3fv("material.ambient", self.material.ambient_color);
-        shader.set_3fv("material.diffuse", self.material.diffuse_color);
+        let mut polygon_mode = 0;
+        unsafe {
+            gl::GetIntegerv(gl::POLYGON_MODE, &mut polygon_mode);
+        }
+        let is_wireframe = polygon_mode as u32 == gl::LINE;
+
+        shader.set_3fv("material.ambient", if is_wireframe {glm::vec3(0.0, 0.0, 0.0)} else {self.material.ambient_color});
+        shader.set_3fv("material.diffuse", if is_wireframe {glm::vec3(0.0, 0.0, 0.0)} else {self.material.diffuse_color});
         shader.set_3fv("material.specular", self.material.specular_color);
         shader.set_float("material.shininess", self.material.specular_exponent);
 

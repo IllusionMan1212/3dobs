@@ -94,7 +94,7 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
                     m.name = model_name.to_str().unwrap().to_string();
                 }
                 state.objects.push(m);
-                state.camera.update_position(state.active_model, &state.objects);
+                state.camera.focus_on_selected_model(state.active_model, &state.objects);
             },
             Err(e) => {
                 let error = format!("Error loading model \"{}\": {}", model_path.to_str().unwrap(), e);

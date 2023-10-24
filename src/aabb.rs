@@ -80,15 +80,19 @@ impl AABB {
         shader.use_shader();
 
         shader.set_mat4fv("model", &model_mat);
+        shader.set_3fv("material.ambient", glm::vec3(1.0, 0.627, 0.157));
+        shader.set_3fv("material.diffuse", glm::vec3(1.0, 0.627, 0.157));
 
         unsafe {
             // draw Mesh
             gl::BindVertexArray(self.vao);
+            gl::LineWidth(5.0);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
             gl::DrawElements(gl::TRIANGLES, self.indices_len as i32, gl::UNSIGNED_INT, std::ptr::null());
 
             // reset stuff to default
             gl::BindVertexArray(0);
+            gl::LineWidth(1.0);
         }
     }
 }

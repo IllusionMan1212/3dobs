@@ -56,7 +56,7 @@ impl Camera {
         self._speed = self.speed * delta_time;
     }
 
-    pub fn update_position(&mut self, active_model: Option<u32>, objects: &Vec<model::Model>) {
+    pub fn focus_on_selected_model(&mut self, active_model: Option<u32>, objects: &Vec<model::Model>) {
         if let Some(id) = active_model {
             for obj in objects {
                 if obj.id == id {

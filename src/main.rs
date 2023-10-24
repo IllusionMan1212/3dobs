@@ -48,16 +48,6 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             source: include_str!("../shaders/frag.glsl").to_string(),
         },
         )?;
-    let light_shader = shader::Shader::new(
-        &mut shader::ShaderSource{
-            name: "vertex.glsl".to_string(),
-            source: include_str!("../shaders/vertex.glsl").to_string(),
-        },
-        &mut shader::ShaderSource{
-            name: "light_f.glsl".to_string(),
-            source: include_str!("../shaders/light_f.glsl").to_string(),
-        },
-        )?;
     let grid_shader = shader::Shader::new(
         &mut shader::ShaderSource{
             name: "grid_v.glsl".to_string(),
@@ -69,58 +59,12 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         },
         )?;
 
-    let vertices: [f32; 288] = [
-        // positions // normals // texture coords
-        -0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 0.0, 0.0,
-        0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 0.0,
-        0.5, 0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 1.0,
-        0.5, 0.5, -0.5, 0.0, 0.0, -1.0, 1.0, 1.0,
-        -0.5, 0.5, -0.5, 0.0, 0.0, -1.0, 0.0, 1.0,
-        -0.5, -0.5, -0.5, 0.0, 0.0, -1.0, 0.0, 0.0,
-        -0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0,
-        0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 0.0,
-        0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-        0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-        -0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 1.0,
-        -0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0,
-        -0.5, 0.5, 0.5, -1.0, 0.0, 0.0, 1.0, 0.0,
-        -0.5, 0.5, -0.5, -1.0, 0.0, 0.0, 1.0, 1.0,
-        -0.5, -0.5, -0.5, -1.0, 0.0, 0.0, 0.0, 1.0,
-        -0.5, -0.5, -0.5, -1.0, 0.0, 0.0, 0.0, 1.0,
-        -0.5, -0.5, 0.5, -1.0, 0.0, 0.0, 0.0, 0.0,
-        -0.5, 0.5, 0.5, -1.0, 0.0, 0.0, 1.0, 0.0,
-        0.5, 0.5, 0.5, 1.0, 0.0, 0.0, 1.0, 0.0,
-        0.5, 0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 1.0,
-        0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 1.0,
-        0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 1.0,
-        0.5, -0.5, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-        0.5, 0.5, 0.5, 1.0, 0.0, 0.0, 1.0, 0.0,
-        -0.5, -0.5, -0.5, 0.0, -1.0, 0.0, 0.0, 1.0,
-        0.5, -0.5, -0.5, 0.0, -1.0, 0.0, 1.0, 1.0,
-        0.5, -0.5, 0.5, 0.0, -1.0, 0.0, 1.0, 0.0,
-        0.5, -0.5, 0.5, 0.0, -1.0, 0.0, 1.0, 0.0,
-        -0.5, -0.5, 0.5, 0.0, -1.0, 0.0, 0.0, 0.0,
-        -0.5, -0.5, -0.5, 0.0, -1.0, 0.0, 0.0, 1.0,
-        -0.5, 0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 1.0,
-        0.5, 0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 1.0,
-        0.5, 0.5, 0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-        0.5, 0.5, 0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-        -0.5, 0.5, 0.5, 0.0, 1.0, 0.0, 0.0, 0.0,
-        -0.5, 0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 1.0
-            ];
-
     let points_lights: [glm::Vec3; 4] = [
         glm::vec3(0.7, 0.2, 2.0),
         glm::vec3(2.3, -3.3, -4.0),
         glm::vec3(-4.0, 2.0, -12.0),
         glm::vec3(0.0, 0.0, -3.0),
     ];
-
-    let ident_mat = glm::mat4(
-        1., 0., 0., 0.,
-        0., 1., 0., 0.,
-        0., 0., 1., 0.,
-        0., 0., 0., 1.);
 
     let mut delta_time: f32 = 0.0;
     let mut last_frame: f32 = 0.0;
@@ -132,38 +76,6 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     let mut first_mouse: bool = true;
 
     unsafe {
-        // Object 1: Cube/container
-        //
-        let mut vbo: u32 = 0;
-        gl::GenBuffers(1, &mut vbo);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(gl::ARRAY_BUFFER, (vertices.len() * core::mem::size_of::<f32>()) as isize, vertices.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
-
-        // position attribute, maps to 'aPos' in vertex shader with location 0
-        gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 8 * std::mem::size_of::<f32>() as i32, std::ptr::null());
-        gl::EnableVertexAttribArray(0);
-
-        // normal attribute, maps to 'aNormal' in vertex shader with location 1
-        gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, 8 * std::mem::size_of::<f32>() as i32, (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
-        gl::EnableVertexAttribArray(1);
-
-        // texture attribute, maps to 'aTexCoords' in vertex shader with location 2
-        gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE, 8 * std::mem::size_of::<f32>() as i32, (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
-        gl::EnableVertexAttribArray(2);
-
-        // Object 2: Light source
-        let mut light_vao: u32 = 0;
-        gl::GenVertexArrays(1, &mut light_vao);
-
-        gl::BindVertexArray(light_vao);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-
-        // position attribute, maps to 'aPos' in vertex shader with location 0
-        gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, 8 * std::mem::size_of::<f32>() as i32, std::ptr::null());
-        gl::EnableVertexAttribArray(0);
-
         grid_shader.use_shader();
         grid_shader.set_float("near", 0.01);
         grid_shader.set_float("far", 200.0);
@@ -255,7 +167,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
                         if state.can_capture_cursor && window.get_mouse_button(glfw::MouseButtonLeft) == Action::Press {
                             if window.get_key(glfw::Key::LeftShift) == Action::Press {
-                                state.camera.move_camera(xoffset, yoffset);
+                                state.camera.move_camera(-xoffset, -yoffset);
                             } else {
                                 if let Some(active_model) = state.active_model {
                                     let x_rotation = xoffset * state.camera.sensitivity * state.rotation_speed;
@@ -302,19 +214,6 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             }
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
 
-            light_shader.use_shader();
-            light_shader.set_mat4fv("view", &view_mat);
-            light_shader.set_mat4fv("projection", &projection_mat);
-
-            // for i in 0..points_lights.len() {
-            //     let light_model = glm::ext::translate(&ident_mat, points_lights[i]);
-            //     let light_model = glm::ext::scale(&light_model, glm::vec3(0.2, 0.2, 0.2));
-            //     light_shader.set_mat4fv("model", &light_model);
-
-            //     gl::BindVertexArray(light_vao);
-            //     gl::DrawArrays(gl::TRIANGLES, 0, 36);
-            // }
-
             // draw grid
             if state.draw_grid {draw_grid(&grid_shader, &view_mat, &projection_mat);}
 
@@ -335,8 +234,6 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             gl::DeleteRenderbuffers(1, &rbo);
         }
 
-        gl::DeleteVertexArrays(1, &light_vao);
-        gl::DeleteBuffers(1, &vbo);
         gl::DeleteFramebuffers(1, &scene_fb);
     }
 
