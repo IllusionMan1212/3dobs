@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use glad_gl::gl;
 use glm;
 use anyhow::{Result, Context};
+use ::log::{info, error};
 
-use crate::{log, model, ui, importer};
+use crate::{model, ui, importer};
 
 pub enum SupportedFileExtensions {
     OBJ,
@@ -66,18 +67,18 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
     for model_path in paths {
         let filename = model_path.file_name();
         if model_path.is_dir() {
-            state.logger.log(&format!("Skipping directory \"{}\"", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+            info!("Skipping directory \"{}\"", filename.unwrap().to_str().unwrap());
             continue;
         }
         match model_path.extension() {
             Some(ext) => {
                 if SupportedFileExtensions::from_str(ext.to_str().unwrap()).is_none() {
-                    state.logger.log(&format!("Skipping file \"{}\" because it is not an OBJ or STL file", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+                    info!("Skipping file \"{}\" because it is not an OBJ or STL file", filename.unwrap().to_str().unwrap());
                     continue;
                 }
             },
             None => {
-                state.logger.log(&format!("Skipping file \"{}\" because it has no extension", filename.unwrap().to_str().unwrap()), log::LogLevel::Info);
+                info!("Skipping file \"{}\" because it has no extension", filename.unwrap().to_str().unwrap());
                 continue;
             }
         }
@@ -88,19 +89,14 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
 
                 state.active_model = Some(m.id);
                 if let Some(model_name) = filename {
-                    let msg = format!("Loaded model \"{}\"", model_name.to_str().unwrap());
-                    println!("{}", msg);
-                    state.logger.log(&msg, log::LogLevel::Info);
+                    info!("Loaded model \"{}\"", model_name.to_str().unwrap());
                     m.name = model_name.to_str().unwrap().to_string();
                 }
                 state.objects.push(m);
                 state.camera.focus_on_selected_model(state.active_model, &state.objects);
             },
             Err(e) => {
-                let error = format!("Error loading model \"{}\": {}", model_path.to_str().unwrap(), e);
-                println!("{}", error);
-
-                state.logger.log(&error, log::LogLevel::Error);
+                error!("Error loading model \"{}\": {}", model_path.to_str().unwrap(), e);
             }
         }
     }

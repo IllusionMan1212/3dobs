@@ -1,5 +1,7 @@
 use std::io::{Read, Seek, BufReader, BufRead};
 
+use log::trace;
+
 use crate::{importer::ObjMesh, importer::Object, importer::Material, aabb::AABB, mesh::Vertex};
 
 const STL_HEADER_SIZE: u64 = 80;
@@ -229,7 +231,7 @@ pub fn load_stl(mut file: std::fs::File) -> Result<Object, Box<dyn std::error::E
         parse_binary_stl(file)?
     };
     let elapsed = now.elapsed();
-    println!("Loaded in {} ms", elapsed.as_millis());
+    trace!("Loaded in {} ms", elapsed.as_millis());
 
     Ok(obj)
 }

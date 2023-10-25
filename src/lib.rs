@@ -8,7 +8,7 @@ pub mod utils;
 pub mod mesh;
 pub mod model;
 pub mod ui;
-pub mod log;
+pub mod logger;
 pub mod aabb;
 pub mod importer;
 pub mod ipc;

@@ -1,6 +1,7 @@
 use std::{os::unix::net::{UnixListener, UnixStream}, path::PathBuf, io::{Write, Read}, fs::File, process::exit, thread, sync::mpsc::Receiver};
 
 use fs4::FileExt;
+use log::error;
 
 fn create_named_pipe(pipe_path: PathBuf) -> UnixListener {
     if pipe_path.exists() {
@@ -58,7 +59,7 @@ pub fn init(lock_file: &File, args_paths: Vec<PathBuf>, one_instance: bool) -> O
                     ipc_tx.send(paths).unwrap();
                 }
                 Err(err) => {
-                    println!("Error: {:?}", err);
+                    error!("Error: {:?}", err);
                     break;
                 }
             }

@@ -1,9 +1,10 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use glad_gl::gl;
+use log::{info, debug};
 use serde::{Serialize, Deserialize};
 
-use crate::{camera::Camera, model, imgui_glfw_support, imgui_opengl_renderer, mesh, ui, log, utils};
+use crate::{camera::Camera, model, imgui_glfw_support, imgui_opengl_renderer, mesh, ui, logger, utils};
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Settings {
@@ -26,7 +27,7 @@ pub struct State {
     pub camera: Camera,
     pub objects: Vec<model::Model>,
     pub viewport_size: [f32; 2],
-    pub logger: log::Log,
+    pub logger: logger::WritableLog,
     pub settings: Settings,
 }
 
@@ -48,7 +49,7 @@ impl Default for State {
             camera: Camera::new(),
             objects: vec![],
             viewport_size: [0.0, 0.0],
-            logger: log::Log::default(),
+            logger: logger::WritableLog::default(),
             settings: Settings::default(),
         }
     }
@@ -210,10 +211,7 @@ fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool 
 
         ui.table_next_column();
         if ui.small_button(format!("X###{}-{}", object.name.as_str(), idx)) {
-            let output = format!("Removing object {}", object.name);
-            println!("{}", output);
-
-            state.logger.log(&output, log::LogLevel::Info);
+            info!("Removing object {}", object.name);
             return true;
         }
         if ui.checkbox("Selected", &mut (Some(state.objects[idx].id) == state.active_model)) {
@@ -256,8 +254,9 @@ fn draw_console(ui: &imgui::Ui, state: &mut State) {
             ui.child_window("###ConsoleHistory")
                 .size([0.0, -27.0])
                 .build(|| {
-                    for line in state.logger.history.iter() {
-                        let style = ui.push_style_color(imgui::StyleColor::Text, line.level.clone());
+                    for line in state.logger.arc.read().unwrap().history.iter() {
+                        let style = ui.push_style_color(imgui::StyleColor::Text, line.level);
+
                         ui.text_wrapped(line.message.clone());
                         style.pop();
                     }
@@ -268,7 +267,8 @@ fn draw_console(ui: &imgui::Ui, state: &mut State) {
 
             ui.separator();
             if ui.button("Clear") {
-                state.logger.clear();
+                let mut logger = state.logger.arc.write().unwrap();
+                logger.clear();
             }
         });
 }
@@ -369,21 +369,13 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
                 let _ = capture.save(save_path);
                 let elapsed = now.elapsed();
 
-                state.logger.log(
-                    format!("Scene capture saved to: {} successfully",
-                        save_path
-                        .canonicalize()
-                        .expect("Capture path to be canonicalized")
-                        .to_str()
-                        .expect("Capture path to be valid unicode"))
-                    .as_str(),
-                    log::LogLevel::Info);
+                info!("Scene capture saved to: {} successfully", save_path
+                    .canonicalize()
+                    .expect("Capture path to be canonicalized")
+                    .to_str()
+                    .expect("Capture path to be valid unicode"));
 
-                state.logger.log(
-                    format!("Scene capture took: {}ms",
-                        elapsed.as_millis())
-                    .as_str(),
-                    log::LogLevel::Debug);
+                debug!("Scene capture took: {}ms", elapsed.as_millis());
 
                 unsafe {
                     gl::BindFramebuffer(gl::FRAMEBUFFER, 0);

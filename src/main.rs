@@ -1,13 +1,49 @@
-use glfw::{Action, Context, Key, Modifiers};
-use glad_gl::gl;
-use anyhow;
 use std::fs::File;
 use std::env;
 use std::path::PathBuf;
 
+use glfw::{Action, Context, Key, Modifiers};
+use glad_gl::gl;
+use anyhow;
+use simplelog::*;
+
 use threedobs::{shader, ui::ui, utils, ipc};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
+    let logger = threedobs::logger::WritableLog::default();
+
+    let log_conf = ConfigBuilder::default()
+        .set_target_level(LevelFilter::Error)
+        .set_thread_level(LevelFilter::Off)
+        .set_level_color(Level::Error, Some(Color::Red))
+        .set_level_color(Level::Debug, Some(Color::Rgb(128, 128, 255)))
+        .set_level_color(Level::Warn, Some(Color::Rgb(255, 163, 0)))
+        .set_level_color(Level::Info, Some(Color::Rgb(128, 128, 128)))
+        .build();
+    let in_program_log_conf = ConfigBuilder::default()
+        .set_target_level(LevelFilter::Off)
+        .set_time_level(LevelFilter::Off)
+        .set_thread_level(LevelFilter::Off)
+        .set_level_color(Level::Error, Some(Color::Red))
+        .set_level_color(Level::Debug, Some(Color::Rgb(128, 128, 255)))
+        .set_level_color(Level::Warn, Some(Color::Rgb(255, 255, 0)))
+        .set_level_color(Level::Info, Some(Color::Rgb(128, 128, 128)))
+        .build();
+
+    let log_level = if cfg!(debug_assertions) {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+
+    CombinedLogger::init(
+        vec![
+        TermLogger::new(log_level, log_conf.clone(), TerminalMode::Mixed, ColorChoice::Auto),
+        WriteLogger::new(log_level, log_conf, File::create("3dobs.log")?),
+        WriteLogger::new(log_level, in_program_log_conf, logger.clone())
+        ]
+    ).unwrap();
+
     let settings: ui::Settings = confy::load("3dobs", "settings")?;
 
     let args: Vec<String> = env::args().collect();
@@ -36,6 +72,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
     let mut state = ui::State{
         settings,
+        logger,
         ..Default::default()
     };
 

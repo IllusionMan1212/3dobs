@@ -1,5 +1,7 @@
 use std::{io::{BufReader, BufRead}, collections::HashMap, path::PathBuf};
 
+use log::{error, warn, trace};
+
 use crate::{mesh::Vertex, aabb::AABB, importer::ObjMesh, importer::Object, importer::Material};
 
 const BUF_CAP: usize = 1024 * 128; // 128 Kilobytes
@@ -140,7 +142,7 @@ fn parse_mtl(path: &PathBuf) -> Result<HashMap<String, Material>, Box<dyn std::e
                 Some(MtlToken::DiffuseTexture) => {
                     // TODO: textures
                 }
-                _ => { println!("Unhandled material token: {}", token) },
+                _ => { warn!("Unhandled material token: {}", token) },
             }
         }
     }
@@ -327,7 +329,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             materials.extend(m);
                         },
                         Err(e) => {
-                            eprintln!("Failed to parse mtl file {:?}: {}", material_path, e);
+                            error!("Failed to parse mtl file {:?}: {}", material_path, e);
                         }
                     }
                 }
@@ -360,12 +362,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                 Some(ObjToken::Line) | Some(ObjToken::Point) => {
                     // we don't handle lines or points
                 }
-                _ => { println!("Unhandled obj token: {}", token) },
+                _ => { warn!("Unhandled obj token: {}", token) },
             }
         }
     }
     let elapsed = now.elapsed();
-    println!("Loaded in {}ms",  elapsed.as_millis());
+    trace!("Loaded in {}ms",  elapsed.as_millis());
 
     let mesh_name = {
         if current_mesh_name.is_empty() && !object_name.is_empty() {

@@ -1,5 +1,6 @@
 use glad_gl::gl;
 use anyhow::Result;
+use log::{debug, error};
 
 pub struct ShaderSource {
     pub name: String,
@@ -26,7 +27,7 @@ impl Shader {
             let mut success1 = 0;
             gl::GetShaderiv(vertex_shader, gl::COMPILE_STATUS, &mut success1);
             #[cfg(debug_assertions)]
-            println!("vertex shader {:?} compiled with status: {}",
+            debug!("vertex shader {:?} compiled with status: {}",
                 vertex_obj.name,
                 success1
             );
@@ -34,7 +35,7 @@ impl Shader {
                 let info_buf = [0u8; 512];
                 gl::GetShaderInfoLog(vertex_shader as u32, 512, std::ptr::null_mut(), info_buf.as_ptr() as *mut i8);
                 #[cfg(debug_assertions)]
-                println!("vertex shader info: {}", std::str::from_utf8(&info_buf).unwrap());
+                error!("vertex shader info: {}", std::str::from_utf8(&info_buf).unwrap());
             }
 
             let frag_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
@@ -45,7 +46,7 @@ impl Shader {
             let mut success2 = 0;
             gl::GetShaderiv(frag_shader, gl::COMPILE_STATUS, &mut success2);
             #[cfg(debug_assertions)]
-            println!("frag shader {:?} compiled with status: {}",
+            debug!("frag shader {:?} compiled with status: {}",
                 frag_obj.name,
                 success2
             );
@@ -53,7 +54,7 @@ impl Shader {
                 let info_buf2 = [0u8; 512];
                 gl::GetShaderInfoLog(frag_shader as u32, 512, std::ptr::null_mut(), info_buf2.as_ptr() as *mut i8);
                 #[cfg(debug_assertions)]
-                println!("frag shader info: {}", std::str::from_utf8(&info_buf2).unwrap());
+                error!("frag shader info: {}", std::str::from_utf8(&info_buf2).unwrap());
             }
 
             let shader_program = gl::CreateProgram();
