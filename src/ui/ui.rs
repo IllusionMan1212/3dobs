@@ -16,6 +16,7 @@ pub struct State {
     pub show_console: bool,
     pub show_help_menu_about: bool,
     pub show_settings: bool,
+    pub show_keybinds: bool,
     pub is_cursor_captured: bool,
     pub can_capture_cursor: bool,
     pub draw_grid: bool,
@@ -29,6 +30,7 @@ pub struct State {
     pub viewport_size: [f32; 2],
     pub logger: logger::WritableLog,
     pub settings: Settings,
+    pub fps: f32,
 }
 
 impl Default for State {
@@ -38,6 +40,7 @@ impl Default for State {
             show_console: false,
             show_help_menu_about: false,
             show_settings: false,
+            show_keybinds: false,
             first_frame_drawn: false,
             is_cursor_captured: false,
             can_capture_cursor: false,
@@ -51,6 +54,7 @@ impl Default for State {
             viewport_size: [0.0, 0.0],
             logger: logger::WritableLog::default(),
             settings: Settings::default(),
+            fps: 0.0,
         }
     }
 }
@@ -76,12 +80,20 @@ pub fn init_imgui(window: &mut glfw::Window) -> (imgui::Context, imgui_glfw_supp
     glfw_platform.attach_window(
         imgui.io_mut(),
         &window,
-        imgui_glfw_support::HiDpiMode::Rounded
+        imgui_glfw_support::HiDpiMode::Default
     );
 
     imgui
         .fonts()
-        .add_font(&[imgui::FontSource::DefaultFontData { config: None }]);
+        .add_font(&[imgui::FontSource::TtfData {
+            data: include_bytes!("../../assets/fonts/Exo-Regular.ttf"),
+            size_pixels: 20.0,
+            config: Some(imgui::FontConfig {
+                oversample_h: 3,
+                pixel_snap_h: true,
+                ..imgui::FontConfig::default()
+            })
+        }]);
 
     imgui.io_mut().font_global_scale = (1.0 / glfw_platform.hidpi_factor()) as f32;
 
@@ -107,7 +119,7 @@ pub fn import_model(state: &mut State) {
     utils::import_models_from_paths(&models, state);
 }
 
-pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::Window, delta_time: f32) {
+pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::Window) {
     ui.main_menu_bar(|| {
         ui.menu("File", || {
             if ui.menu_item_config("Import Model(s)").shortcut("Ctrl+O").build() {
@@ -124,18 +136,46 @@ pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::
             if ui.menu_item_config("Show Grid").selected(state.draw_grid).build() {
                 state.draw_grid = !state.draw_grid;
             }
+            if ui.menu_item_config("Draw Bounding Box").selected(state.draw_aabb).build() {
+                state.draw_aabb = !state.draw_aabb;
+            }
         });
         ui.menu("Help", || {
+            if ui.menu_item_config("Keybinds").selected(state.show_keybinds).build() {
+                state.show_keybinds = !state.show_keybinds;
+            }
             if ui.menu_item_config("About").selected(state.show_help_menu_about).build() {
                 state.show_help_menu_about = !state.show_help_menu_about;
             }
         });
         let mem = state.objects.iter().fold(0 as usize, |acc, m| acc + m.mem_usage) as f32;
-        let mem_fps = format!("Mem: {:.1}MB | FPS: {:.1}", mem / (1024.0 * 1024.0), 1.0 / delta_time);
+        let mem_fps = format!("Mem: {:.1}MB | FPS: {:.1}", mem / (1024.0 * 1024.0), state.fps);
         let avail_size = [*ui.content_region_avail().get(0).unwrap() - ui.calc_text_size(&mem_fps)[0], 0.0];
         ui.dummy(avail_size);
         ui.text(&mem_fps);
     });
+}
+
+fn draw_about_window(ui: &imgui::Ui, state: &mut State) {
+    if !state.show_help_menu_about {
+        return;
+    }
+    let display_size = ui.io().display_size;
+
+    ui.window("About")
+        .resizable(false)
+        .movable(false)
+        .opened(&mut state.show_help_menu_about)
+        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
+        .position_pivot([0.5, 0.5])
+        .build(|| {
+            ui.text("3dobs - 3D Object Browser");
+            ui.text(format!("Version: {}-{}", env!("CARGO_PKG_VERSION"), env!("GIT_HASH")));
+            ui.text(format!("{}", env!("CARGO_PKG_DESCRIPTION")));
+            ui.spacing();
+            ui.spacing();
+            ui.text(format!("Made by: {}", env!("CARGO_PKG_AUTHORS")));
+        });
 }
 
 pub fn draw_settings_window(ui: &imgui::Ui, state: &mut State) {
@@ -145,13 +185,65 @@ pub fn draw_settings_window(ui: &imgui::Ui, state: &mut State) {
     let display_size = ui.io().display_size;
 
     ui.window("Settings")
-        .size([500.0, 100.0], imgui::Condition::FirstUseEver)
         .opened(&mut state.show_settings)
-        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::FirstUseEver)
+        .movable(false)
+        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
         .position_pivot([0.5, 0.5])
         .build(|| {
             if ui.checkbox("Only allow one program instance (Reboot required when enabling)", &mut state.settings.one_instance) {
                 confy::store("3dobs", "settings", state.settings.clone()).unwrap();
+            }
+        });
+}
+
+fn draw_keybinds_window(ui: &imgui::Ui, state: &mut State) {
+    if !state.show_keybinds {
+        return;
+    }
+    let display_size = ui.io().display_size;
+
+    ui.window("Keybinds")
+        .opened(&mut state.show_keybinds)
+        .resizable(false)
+        .movable(false)
+        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
+        .position_pivot([0.5, 0.5])
+        .build(|| {
+            if let Some(..) = ui.begin_table_with_sizing("Keybinds Table", 2, imgui::TableFlags::SIZING_STRETCH_SAME, [0.0, 0.0], 0.0) {
+                ui.table_next_column();
+                ui.text_colored([0.7, 0.7, 0.6, 1.0], "Key");
+                ui.table_next_column();
+                ui.text_colored([0.7, 0.7, 0.6, 1.0], "Action");
+
+                ui.table_next_column();
+                ui.text("Ctrl + O | Drag & Drop");
+                ui.table_next_column();
+                ui.text("Import Model(s)");
+
+                ui.table_next_column();
+                ui.text("Ctrl + Q");
+                ui.table_next_column();
+                ui.text("Quit");
+                
+                ui.table_next_column();
+                ui.text("Left Mouse Button");
+                ui.table_next_column();
+                ui.text("Rotate object");
+
+                ui.table_next_column();
+                ui.text("Scroll");
+                ui.table_next_column();
+                ui.text("Zoom camera");
+
+                ui.table_next_column();
+                ui.text("Left Shift");
+                ui.table_next_column();
+                ui.text("Pan camera");
+
+                ui.table_next_column();
+                ui.text("Left Ctrl");
+                ui.table_next_column();
+                ui.text("Increase camera movement speed");
             }
         });
 }
@@ -172,16 +264,6 @@ fn draw_transformations(ui: &imgui::Ui, mesh: &mut mesh::Mesh) {
         .speed(0.1)
         .display_format("Z: %.3f")
         .build(ui, &mut mesh.position.z);
-    imgui::Drag::new("Scale")
-        .range(f32::NEG_INFINITY, f32::INFINITY)
-        .speed(0.1)
-        .display_format("%.7f")
-        .build_array(ui, mesh.scale.as_array_mut());
-    imgui::Drag::new("Rotation")
-        .range(f32::NEG_INFINITY, f32::INFINITY)
-        .speed(1.0)
-        .display_format("%.2f")
-        .build_array(ui, mesh.rotation.as_array_mut());
 }
 
 fn draw_mesh_hierarchy(ui: &imgui::Ui, mesh: &mut mesh::Mesh, i: usize) {
@@ -198,27 +280,25 @@ fn draw_mesh_hierarchy(ui: &imgui::Ui, mesh: &mut mesh::Mesh, i: usize) {
 }
 
 fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool {
-    let object = &mut state.objects[idx];
-    if let Some(..) = ui.begin_table_with_sizing("Objects Table", 2, imgui::TableFlags::SIZING_STRETCH_PROP, [0.0, 0.0], 0.0) {
-        ui.table_next_row();
-        ui.table_next_column();
-        ui.tree_node_config(format!("{} ({:.1}MB)###{}", object.name.as_str(), object.mem_usage as f32 / (1024.0 * 1024.0), idx))
-            .build(|| {
-                for (j, mesh) in &mut object.meshes.iter_mut().enumerate() {
-                    draw_mesh_hierarchy(ui, mesh, j);
-                }
-            });
+    ui.table_next_column();
+    if ui.checkbox(format!("###{}", state.objects[idx].id), &mut (Some(state.objects[idx].id) == state.active_model)) {
+        state.objects[idx].reset_rotation();
+        state.active_model = Some(state.objects[idx].id);
+        state.camera.focus_on_selected_model(state.active_model, &state.objects);
+    }
 
-        ui.table_next_column();
-        if ui.small_button(format!("X###{}-{}", object.name.as_str(), idx)) {
-            info!("Removing object {}", object.name);
-            return true;
-        }
-        if ui.checkbox("Selected", &mut (Some(state.objects[idx].id) == state.active_model)) {
-            state.objects[idx].reset_rotation();
-            state.active_model = Some(state.objects[idx].id);
-            state.camera.focus_on_selected_model(state.active_model, &state.objects);
-        }
+    ui.table_next_column();
+    ui.tree_node_config(format!("{} ({:.1}MB)###{}", state.objects[idx].name.as_str(), state.objects[idx].mem_usage as f32 / (1024.0 * 1024.0), idx))
+        .build(|| {
+            for (j, mesh) in &mut state.objects[idx].meshes.iter_mut().enumerate() {
+                draw_mesh_hierarchy(ui, mesh, j);
+            }
+        });
+
+    ui.table_next_column();
+    if ui.small_button(format!("X###{}-{}", state.objects[idx].name.as_str(), idx)) {
+        info!("Removing object {}", state.objects[idx].name);
+        return true;
     }
 
     return false;
@@ -230,19 +310,40 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
         .build(|| {
             let mut i = 0;
 
-            while i < state.objects.len() {
-                if draw_object_hierarchy(ui, state, i) {
-                    let selected_obj_id = state.objects[i].id;
-                    state.objects.remove(i);
-                    if state.active_model == Some(selected_obj_id) {
-                        let model = state.objects.last_mut().map(|m| m.reset_rotation());
-                        state.active_model = model.and_then(|o| Some(o.id));
-                        state.camera.focus_on_selected_model(state.active_model, &state.objects);
-                    }
-                    continue;
-                }
+            if let Some(..) = ui.begin_table_with_sizing("Objects Table", 3, imgui::TableFlags::SIZING_FIXED_FIT, [0.0, 0.0], 0.0) {
+                ui.table_setup_column_with(imgui::TableColumnSetup {
+                    name: "",
+                    flags: imgui::TableColumnFlags::empty(),
+                    init_width_or_weight: 30.0,
+                    user_id: imgui::Id::default(),
+                });
+                ui.table_setup_column_with(imgui::TableColumnSetup {
+                    name: "",
+                    flags: imgui::TableColumnFlags::WIDTH_STRETCH,
+                    init_width_or_weight: 0.0,
+                    user_id: imgui::Id::default(),
+                });
+                ui.table_setup_column_with(imgui::TableColumnSetup {
+                    name: "",
+                    flags: imgui::TableColumnFlags::empty(),
+                    init_width_or_weight: 20.0,
+                    user_id: imgui::Id::default(),
+                });
 
-                i = i + 1;
+                while i < state.objects.len() {
+                    if draw_object_hierarchy(ui, state, i) {
+                        let selected_obj_id = state.objects[i].id;
+                        state.objects.remove(i);
+                        if state.active_model == Some(selected_obj_id) {
+                            let model = state.objects.last_mut().map(|m| m.reset_rotation());
+                            state.active_model = model.and_then(|o| Some(o.id));
+                            state.camera.focus_on_selected_model(state.active_model, &state.objects);
+                        }
+                        continue;
+                    }
+
+                    i = i + 1;
+                }
             }
         });
 }
@@ -252,7 +353,7 @@ fn draw_console(ui: &imgui::Ui, state: &mut State) {
         .size([500.0, 200.0], imgui::Condition::FirstUseEver)
         .build(|| {
             ui.child_window("###ConsoleHistory")
-                .size([0.0, -27.0])
+                .size([0.0, -35.0])
                 .build(|| {
                     for line in state.logger.arc.read().unwrap().history.iter() {
                         let style = ui.push_style_color(imgui::StyleColor::Text, line.level);
@@ -384,8 +485,6 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
             ui.same_line();
             ui.checkbox("Wireframe", &mut state.wireframe);
             ui.same_line();
-            ui.checkbox("Bounding box", &mut state.draw_aabb);
-            ui.same_line();
             ui.checkbox("FOV zoom", &mut state.fov_zoom);
             ui.same_line();
             ui.set_next_item_width(150.0);
@@ -418,39 +517,21 @@ pub fn draw_ui(
     glfw_platform: &imgui_glfw_support::GlfwPlatform,
     window: &mut glfw::Window,
     state: &mut State,
-    delta_time: f32,
     last_cursor: &mut Option<imgui::MouseCursor>,
     scene_fb_texture: u32,
 ) {
     glfw_platform.prepare_frame(imgui.io_mut(), window).expect("Failed to prepare imgui frame");
 
-    let display_size = imgui.io().display_size;
     let ui = imgui.new_frame();
     create_initial_docking(ui, state);
 
-    draw_main_menu_bar(ui, state, window, delta_time);
-
-    if state.show_help_menu_about {
-        ui.window("About")
-            .size([300.0, 150.0], imgui::Condition::FirstUseEver)
-            .resizable(false)
-            .movable(false)
-            .opened(&mut state.show_help_menu_about)
-            .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
-            .position_pivot([0.5, 0.5])
-            .build(|| {
-                ui.text("3dobs - 3D Object Browser");
-                ui.text(format!("Version: {}-{}", env!("CARGO_PKG_VERSION"), env!("GIT_HASH")));
-                ui.text(format!("{}", env!("CARGO_PKG_DESCRIPTION")));
-                ui.spacing();
-                ui.spacing();
-                ui.text(format!("Made by: {}", env!("CARGO_PKG_AUTHORS")));
-            });
-    }
+    draw_main_menu_bar(ui, state, window);
 
     draw_viewport(ui, state, scene_fb_texture);
     draw_objects_window(ui, state);
     draw_console(ui, state);
+    draw_about_window(ui, state);
+    draw_keybinds_window(ui, state);
     draw_settings_window(ui, state);
 
     ui.end_frame_early();

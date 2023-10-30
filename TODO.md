@@ -32,5 +32,7 @@
  - [x] Toggle for dis/allowing the one instance option
  - [x] Show how much memory each loaded model is using
  - [ ] Move the invisible point lights to be around selected object from all sides so it's nicely illuminated
+ - [x] Shortcuts/keybinds window under the 'Help' menu item
+ - [ ] Texture support
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)

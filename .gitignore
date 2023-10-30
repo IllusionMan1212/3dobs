@@ -2,3 +2,4 @@
 
 3rdparty/*/target
 models/**/*
+3dobs.log

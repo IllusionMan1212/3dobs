@@ -156,6 +156,8 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             utils::import_models_from_paths(&args_paths, &mut state);
         }
 
+        let mut time_since_last_frame_acc = 0.0;
+
         // main loop
         while !window.should_close() {
             let current_frame = glfw.get_time() as f32;
@@ -165,6 +167,13 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             imgui.io_mut().update_delta_time(std::time::Duration::from_secs_f32(delta_time));
 
             state.camera.update_speed(delta_time);
+
+            time_since_last_frame_acc += delta_time;
+
+            if time_since_last_frame_acc >= 0.1 {
+                state.fps = 1.0 / delta_time;
+                time_since_last_frame_acc = 0.0;
+            }
 
             // camera matrices
             let view_mat = glm::ext::look_at(state.camera.position, state.camera.position + state.camera.front, state.camera.up);
@@ -270,7 +279,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::Disable(gl::DEPTH_TEST);
             gl::Disable(gl::BLEND);
-            ui::draw_ui(&mut imgui, &renderer, &glfw_platform, &mut window, &mut state, delta_time, &mut last_cursor, scene_texture);
+            ui::draw_ui(&mut imgui, &renderer, &glfw_platform, &mut window, &mut state, &mut last_cursor, scene_texture);
 
             glfw.poll_events();
             window.swap_buffers();
