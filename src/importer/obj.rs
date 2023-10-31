@@ -227,7 +227,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                     current_mesh_name = iter.next().unwrap_or("default_mesh").to_string();
                 }
                 Some(ObjToken::Vertex) => {
-                    let mut iter = iter
+                    let vec = iter.collect::<Vec<_>>();
+                    if vec.len() < 3 {
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Incomplete vertex data")));
+                    }
+
+                    let mut iter = vec.iter()
                         .take(3)
                         .map(|i| i.parse::<f32>().unwrap());
                     let x = iter.next().unwrap();
@@ -240,7 +245,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
 
                 }
                 Some(ObjToken::Normal) => {
-                    let mut iter = iter
+                    let vec = iter.collect::<Vec<_>>();
+                    if vec.len() < 3 {
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Incomplete vertex normal data")));
+                    }
+
+                    let mut iter = vec.iter()
                         .take(3)
                         .map(|i| i.parse::<f32>().unwrap());
                     let x = iter.next().unwrap();
@@ -257,8 +267,6 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                     tex_coords.push(glm::vec2(u, v));
                 }
                 Some(ObjToken::Face) => {
-                    // TODO: vertex indices can be negative
-
                     let face = iter.collect::<Vec<_>>();
                     let mut calculated_normal = glm::vec3(0.0, 0.0, 0.0);
 
@@ -276,7 +284,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                     for (i, vert) in face.iter().enumerate() {
                         if vert.contains("//") {
                             let mut it = vert.split("//");
-                            let vert = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let mut vert = it.next().unwrap().parse::<i32>().unwrap();
+                            if vert < 0 {
+                                vert = temp_vertices.len() as i32 + vert;
+                            } else {
+                                vert -= 1;
+                            }
                             let normal = it.next().unwrap().parse::<i32>().unwrap() - 1;
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vert as usize).unwrap(),
@@ -285,7 +298,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             });
                         } else if vert.matches("/").count() == 2 {
                             let mut it = vert.split("/");
-                            let vertex = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let mut vertex = it.next().unwrap().parse::<i32>().unwrap();
+                            if vertex < 0 {
+                                vertex = temp_vertices.len() as i32 + vertex;
+                            } else {
+                                vertex -= 1;
+                            }
                             let t_coords = it.next().unwrap().parse::<i32>().unwrap() - 1;
                             let normal = it.next().unwrap().parse::<i32>().unwrap() - 1;
                             vertices.push(Vertex{
@@ -295,7 +313,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             });
                         } else if vert.matches("/").count() == 1 {
                             let mut it = vert.split("/");
-                            let vertex = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let mut vertex = it.next().unwrap().parse::<i32>().unwrap();
+                            if vertex < 0 {
+                                vertex = temp_vertices.len() as i32 + vertex;
+                            } else {
+                                vertex -= 1;
+                            }
                             let t_coords = it.next().unwrap().parse::<i32>().unwrap() - 1;
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
@@ -303,7 +326,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                                 tex_coords: *tex_coords.get(t_coords as usize).unwrap()
                             });
                         } else {
-                            let vert = vert.parse::<i32>().unwrap() - 1;
+                            let mut vert = vert.parse::<i32>().unwrap();
+                            if vert < 0 {
+                                vert = temp_vertices.len() as i32 + vert;
+                            } else {
+                                vert -= 1;
+                            }
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vert as usize).unwrap(),
                                 normal: calculated_normal,
