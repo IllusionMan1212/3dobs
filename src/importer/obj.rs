@@ -350,14 +350,16 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                     indices_counter += face.len() as u32;
                 }
                 Some(ObjToken::MaterialLib) => {
-                    let material_path = obj_path.parent().unwrap().join(iter.next().unwrap_or(""));
-                    let new_materials = parse_mtl(&material_path);
-                    match new_materials {
-                        Ok(m) => {
-                            materials.extend(m);
-                        },
-                        Err(e) => {
-                            error!("Failed to parse mtl file {:?}: {}", material_path, e);
+                    for matlib in iter {
+                        let material_path = obj_path.parent().unwrap().join(matlib);
+                        let new_materials = parse_mtl(&material_path);
+                        match new_materials {
+                            Ok(m) => {
+                                materials.extend(m);
+                            },
+                            Err(e) => {
+                                error!("Failed to parse mtl file {:?}: {}", material_path, e);
+                            }
                         }
                     }
                 }
