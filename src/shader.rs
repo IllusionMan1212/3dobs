@@ -108,6 +108,13 @@ impl Shader {
         }
     }
 
+    pub fn set_mat3fv(&self, name: &str, value: &glm::Mat3) {
+        let c_str = std::ffi::CString::new(name).unwrap();
+        unsafe {
+            gl::UniformMatrix3fv(gl::GetUniformLocation(self.program_id, c_str.as_ptr()), 1, gl::FALSE, value.as_array().as_ptr() as *const f32);
+        }
+    }
+
     pub fn set_mat4fv(&self, name: &str, value: &glm::Mat4) {
         let c_str = std::ffi::CString::new(name).unwrap();
         unsafe {
