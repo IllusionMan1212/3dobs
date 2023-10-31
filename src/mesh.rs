@@ -104,6 +104,13 @@ impl Mesh {
         let model_mat = apply_rotation(&model_mat, self.rotation, pivot);
         let model_mat = glm::ext::translate(&model_mat, glm::vec3(self.position.x, self.position.y, self.position.z));
         shader.set_mat4fv("model", &model_mat);
+        let normal_mat = glm::transpose(&glm::inverse(&model_mat));
+        let normal_mat = glm::mat3(
+            normal_mat[0][0], normal_mat[0][1], normal_mat[0][2],
+            normal_mat[1][0], normal_mat[1][1], normal_mat[1][2],
+            normal_mat[2][0], normal_mat[2][1], normal_mat[2][2],
+        );
+        shader.set_mat3fv("normalMatrix", &normal_mat);
 
         let mut polygon_mode = 0;
         unsafe {
@@ -111,10 +118,15 @@ impl Mesh {
         }
         let is_wireframe = polygon_mode as u32 == gl::LINE;
 
-        shader.set_3fv("material.ambient", if is_wireframe {glm::vec3(0.0, 0.0, 0.0)} else {self.material.ambient_color});
-        shader.set_3fv("material.diffuse", if is_wireframe {glm::vec3(0.0, 0.0, 0.0)} else {self.material.diffuse_color});
-        shader.set_3fv("material.specular", self.material.specular_color);
-        shader.set_float("material.shininess", self.material.specular_exponent);
+        if !is_wireframe {
+            shader.set_3fv("material.ambient", self.material.ambient_color);
+            shader.set_3fv("material.diffuse", self.material.diffuse_color);
+            shader.set_3fv("material.specular", self.material.specular_color);
+            shader.set_float("material.shininess", self.material.specular_exponent);
+        } else {
+            shader.set_3fv("material.ambient", glm::vec3(0.0, 0.0, 0.0));
+            shader.set_3fv("material.diffuse", glm::vec3(0.0, 0.0, 0.0));
+        }
 
         // for i in 0..self.textures.len() {
         //     unsafe {

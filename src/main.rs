@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         .build();
 
     let log_level = if cfg!(debug_assertions) {
-        LevelFilter::Debug
+        LevelFilter::Trace
     } else {
         LevelFilter::Info
     };
@@ -132,22 +132,22 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             mesh_shader.set_float(&format!("pointLights[{}].linear", i), 0.09);
             mesh_shader.set_float(&format!("pointLights[{}].quadratic", i), 0.032);
 
-            mesh_shader.set_3fv(&format!("pointLights[{}].ambient", i), glm::vec3(0.2, 0.2, 0.2));
-            mesh_shader.set_3fv(&format!("pointLights[{}].diffuse", i), glm::vec3(0.5, 0.5, 0.5));
+            mesh_shader.set_3fv(&format!("pointLights[{}].ambient", i), glm::vec3(0.1, 0.1, 0.1));
+            mesh_shader.set_3fv(&format!("pointLights[{}].diffuse", i), glm::vec3(0.7, 0.7, 0.7));
             mesh_shader.set_3fv(&format!("pointLights[{}].specular", i), glm::vec3(1.0, 1.0, 1.0));
         }
         mesh_shader.set_float("spotLight.cutOff", glm::cos(glm::radians(12.5)));
         mesh_shader.set_float("spotLight.outerCutOff", glm::cos(glm::radians(15.0)));
         mesh_shader.set_3fv("spotLight.ambient", glm::vec3(0.2, 0.2, 0.2));
-        mesh_shader.set_3fv("spotLight.diffuse", glm::vec3(0.2, 0.2, 0.2));
+        mesh_shader.set_3fv("spotLight.diffuse", glm::vec3(0.5, 0.5, 0.5));
         mesh_shader.set_3fv("spotLight.specular", glm::vec3(1.0, 1.0, 1.0));
         mesh_shader.set_float("spotLight.constant", 1.0);
         mesh_shader.set_float("spotLight.linear", 0.09);
         mesh_shader.set_float("spotLight.quadratic", 0.032);
 
         mesh_shader.set_3fv("dirLight.direction", glm::vec3(-0.2, -1.0, -0.3));
-        mesh_shader.set_3fv("dirLight.ambient", glm::vec3(0.2, 0.2, 0.2));
-        mesh_shader.set_3fv("dirLight.diffuse", glm::vec3(0.5, 0.5, 0.5));
+        mesh_shader.set_3fv("dirLight.ambient", glm::vec3(0.1, 0.1, 0.1));
+        mesh_shader.set_3fv("dirLight.diffuse", glm::vec3(1.0, 1.0, 1.0));
         mesh_shader.set_3fv("dirLight.specular", glm::vec3(1.0, 1.0, 1.0));
 
         let scene_fb = create_scene_framebuffer();
