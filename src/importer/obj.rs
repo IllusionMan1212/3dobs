@@ -290,7 +290,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 vert -= 1;
                             }
-                            let normal = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let mut normal = it.next().unwrap().parse::<i32>().unwrap();
+                            if normal < 0 {
+                                normal = normals.len() as i32 + normal;
+                            } else {
+                                normal -= 1;
+                            }
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vert as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
@@ -304,8 +309,18 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 vertex -= 1;
                             }
-                            let t_coords = it.next().unwrap().parse::<i32>().unwrap() - 1;
-                            let normal = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let mut t_coords = it.next().unwrap().parse::<i32>().unwrap();
+                            if t_coords < 0 {
+                                t_coords = tex_coords.len() as i32 + t_coords;
+                            } else {
+                                t_coords -= 1;
+                            }
+                            let mut normal = it.next().unwrap().parse::<i32>().unwrap();
+                            if normal < 0 {
+                                normal = normals.len() as i32 + normal;
+                            } else {
+                                normal -= 1;
+                            }
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
@@ -319,7 +334,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 vertex -= 1;
                             }
-                            let t_coords = it.next().unwrap().parse::<i32>().unwrap() - 1;
+                            let mut t_coords = it.next().unwrap().parse::<i32>().unwrap();
+                            if t_coords < 0 {
+                                t_coords = tex_coords.len() as i32 + t_coords;
+                            } else {
+                                t_coords -= 1;
+                            }
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: calculated_normal,
@@ -339,7 +359,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             });
                         }
 
-                        // 2 triangles per face
+                        // Triangulate faces. 2 triangles per face
                         if i < face.len() - 2 {
                             indices.push(indices_counter);
                             indices.push(indices_counter + i as u32 + 1);
@@ -389,8 +409,12 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                     let mat_name = iter.next().unwrap_or("").to_string();
                     current_material = materials.get(&mat_name).cloned();
                 }
+                // Things we ignore have a statement to not clutter the log
                 Some(ObjToken::Line) | Some(ObjToken::Point) => {
                     // we don't handle lines or points
+                }
+                Some(ObjToken::SmoothShading) => {
+                    // idc about this
                 }
                 _ => { warn!("Unhandled obj token: {}", token) },
             }
