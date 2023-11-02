@@ -33,6 +33,6 @@
  - [x] Show how much memory each loaded model is using
  - [ ] Move the invisible point lights to be around selected object from all sides so it's nicely illuminated
  - [x] Shortcuts/keybinds window under the 'Help' menu item
- - [ ] Texture support
+ - [x] Texture support (basic, but it's there)
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)
