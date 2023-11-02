@@ -12,55 +12,6 @@ pub struct Model {
     pub mem_usage: usize,
 }
 
-// TODO: texture support, kept for reference
-// fn load_material_textures(
-//     mat: &russimp::material::Material,
-//     dir: &std::path::PathBuf,
-//     loaded_textures: &mut Vec<Texture>
-// ) -> (Vec<Texture>, Vec<Box<dyn std::error::Error>>) {
-
-//     let mut textures = vec![];
-//     let mut errors = vec![];
-
-//     for (typ, tex) in mat.textures.iter() {
-//         if SUPPORTED_TEXTURE_TYPES.contains(typ) {
-//             let texture = tex.borrow();
-//             let mut skip = false;
-//             let tex_filename = &texture.filename;
-//             // HACK: fix this
-//             if tex_filename.is_empty() {
-//                 continue;
-//             }
-//             // println!("texture filename: {}", tex_filename);
-//             let path = dir.join(tex_filename);
-
-//             for loaded_tex in &mut *loaded_textures {
-//                 if loaded_tex.path == path {
-//                     textures.push(loaded_tex.clone());
-//                     skip = true;
-//                     break;
-//                 }
-//             }
-
-//             if !skip {
-//                 match Texture::new(path, *typ) {
-//                     Ok(texture) => {
-//                         loaded_textures.push(texture.clone());
-//                         textures.push(texture);
-//                     },
-//                     Err(e) => {
-//                         let err = anyhow!("Error loading texture: {}", e);
-//                         println!("{}", err);
-//                         errors.push(err.into());
-//                     },
-//                 }
-//             }
-//         }
-//     }
-
-//     return (textures, errors);
-// }
-
 impl Model {
     pub fn new(obj: importer::Object, state: &mut ui::State) -> Model {
         let mut meshes = Vec::new();
@@ -90,7 +41,7 @@ impl Model {
         return model;
     }
 
-    pub fn draw(&self, shader: &Shader, draw_aabb: bool) {
+    pub fn draw(&self, shader: &Shader, draw_aabb: bool, show_textures: bool) {
         let center_x = ((self.aabb.max.x / 2.0) + (self.aabb.min.x / 2.0)) * self.scaling_factor;
         let center_y = ((self.aabb.max.y / 2.0) + (self.aabb.min.y / 2.0)) * self.scaling_factor;
         let center_z = ((self.aabb.max.z / 2.0) + (self.aabb.min.z / 2.0)) * self.scaling_factor;
@@ -102,7 +53,7 @@ impl Model {
 
 
         for mesh in &self.meshes {
-            mesh.draw(shader, self.scaling_factor, pivot);
+            mesh.draw(shader, self.scaling_factor, pivot, show_textures);
         }
 
         if draw_aabb {

@@ -264,7 +264,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
                 } else {
                     gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
                 }
-                if Some(obj.id) == state.active_model {obj.draw(&mesh_shader, state.draw_aabb);}
+                if Some(obj.id) == state.active_model {obj.draw(&mesh_shader, state.draw_aabb, state.show_textures);}
             }
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
 

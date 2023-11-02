@@ -1,6 +1,7 @@
 use glad_gl::gl;
+use log::warn;
 
-use crate::{shader::Shader, utils, importer::Material};
+use crate::{shader::Shader, utils, importer::{Material, TextureType}};
 
 fn create_rotation_matrix(pitch: f32, yaw: f32, roll: f32, pivot: glm::Vec3) -> glm::Mat4 {
     let pitch = pitch.to_radians();
@@ -36,7 +37,6 @@ pub struct Mesh {
 
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
-    // pub textures: Vec<Texture>,
     pub material: Material,
 
     vao: u32,
@@ -82,7 +82,6 @@ impl Mesh {
             name: name.to_string(),
             vertices,
             indices,
-            // textures,
             material: material.unwrap_or_default(),
             vbo,
             vao,
@@ -94,23 +93,26 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, shader: &Shader, scale: f32, pivot: glm::Vec3) {
-        // let mut diffuse = 1;
-        // let mut specular = 1;
-
+    pub fn draw(&self, shader: &Shader, scale: f32, pivot: glm::Vec3, show_textures: bool) {
         shader.use_shader();
 
         let model_mat = glm::ext::scale(&utils::mat_ident(), glm::vec3(scale, scale, scale));
         let model_mat = apply_rotation(&model_mat, self.rotation, pivot);
         let model_mat = glm::ext::translate(&model_mat, glm::vec3(self.position.x, self.position.y, self.position.z));
         shader.set_mat4fv("model", &model_mat);
-        let normal_mat = glm::transpose(&glm::inverse(&model_mat));
-        let normal_mat = glm::mat3(
-            normal_mat[0][0], normal_mat[0][1], normal_mat[0][2],
-            normal_mat[1][0], normal_mat[1][1], normal_mat[1][2],
-            normal_mat[2][0], normal_mat[2][1], normal_mat[2][2],
-        );
-        shader.set_mat3fv("normalMatrix", &normal_mat);
+
+        if glm::ext::is_invertible(&model_mat) {
+            let normal_mat = glm::transpose(&glm::inverse(&model_mat));
+            let normal_mat = glm::mat3(
+                normal_mat[0][0], normal_mat[0][1], normal_mat[0][2],
+                normal_mat[1][0], normal_mat[1][1], normal_mat[1][2],
+                normal_mat[2][0], normal_mat[2][1], normal_mat[2][2],
+            );
+            shader.set_mat3fv("normalMatrix", &normal_mat);
+            shader.set_bool("useNormalMatrix", true);
+        } else {
+            shader.set_bool("useNormalMatrix", false);
+        }
 
         let mut polygon_mode = 0;
         unsafe {
@@ -119,34 +121,44 @@ impl Mesh {
         let is_wireframe = polygon_mode as u32 == gl::LINE;
 
         if !is_wireframe {
+            // TODO: these can be missing in the (.obj) material, maybe we should set them
+            // to 1.0 as fallback. shininess too
             shader.set_3fv("material.ambient", self.material.ambient_color);
             shader.set_3fv("material.diffuse", self.material.diffuse_color);
             shader.set_3fv("material.specular", self.material.specular_color);
-            shader.set_float("material.shininess", self.material.specular_exponent);
+            shader.set_float("material.shininess", 32.0);
+            shader.set_float("material.opacity", self.material.opacity);
         } else {
             shader.set_3fv("material.ambient", glm::vec3(0.0, 0.0, 0.0));
             shader.set_3fv("material.diffuse", glm::vec3(0.0, 0.0, 0.0));
         }
 
-        // for i in 0..self.textures.len() {
-        //     unsafe {
-        //         gl::ActiveTexture(gl::TEXTURE0 + i as u32);
-        //         match self.textures[i].typ {
-        //             russimp::material::TextureType::Diffuse => {
-        //                 diffuse += 1;
-        //                 shader.set_int(format!("material.texture_diffuse{}", diffuse).as_str(), i as i32);
-        //             },
-        //             russimp::material::TextureType::Specular => {
-        //                 specular += 1;
-        //                 shader.set_int(format!("material.texture_specular{}", specular).as_str(), i as i32);
-        //             },
-        //             _ => {}, // don't do anything because unsupported texture types are logged
-        //                      // when the model is loaded
-        //         }
+        if show_textures {
+            shader.set_bool("useTextures", self.material.textures.len() > 0);
+            for (i, tex) in self.material.textures.iter().enumerate() {
+                unsafe {
+                    gl::ActiveTexture(gl::TEXTURE0 + i as u32);
+                    match tex.typ {
+                        TextureType::Ambient => {
+                            shader.set_int("material.texture_ambient", i as i32);
+                        },
+                        TextureType::Diffuse => {
+                            shader.set_int("material.texture_diffuse", i as i32);
+                        },
+                        TextureType::Specular => {
+                            shader.set_int("material.texture_specular{}", i as i32);
+                        },
+                        _ => {
+                            warn!("Unsupported texture type: {:?}", tex.typ);
+                        },
+                    }
 
-        //         gl::BindTexture(gl::TEXTURE_2D, self.textures[i].id);
-        //     }
-        // }
+                    gl::BindTexture(gl::TEXTURE_2D, tex.id);
+                }
+            }
+        } else {
+            shader.set_bool("useTextures", false);
+        }
 
         unsafe {
             // draw Mesh
@@ -170,6 +182,7 @@ impl Mesh {
 
 impl Drop for Mesh {
     fn drop(&mut self) {
+        // TODO: should we impl a Drop on material to delete the textures from gpu??
         unsafe {
             gl::BindVertexArray(0);
             gl::DeleteBuffers(1, &self.vbo);
@@ -196,27 +209,4 @@ impl Vertex {
         }
     }
 }
-
-// #[derive(Clone, Debug)]
-// pub struct Texture {
-//     pub id: u32,
-//     pub typ: russimp::material::TextureType,
-//     pub path: std::path::PathBuf,
-// }
-
-// impl Texture {
-//     pub fn new(path: std::path::PathBuf, typ: russimp::material::TextureType) -> Result<Self, Box<dyn std::error::Error>> {
-//         let path_str = match path.to_str() {
-//             Some(path) => path,
-//             None => return Err("Failed to convert texture path to string".into()),
-//         };
-//         let id = utils::load_texture(path_str)?;
-
-//         Ok(Texture {
-//             id,
-//             typ,
-//             path,
-//         })
-//     }
-// }
 
