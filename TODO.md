@@ -34,5 +34,6 @@
  - [ ] Move the invisible point lights to be around selected object from all sides so it's nicely illuminated
  - [x] Shortcuts/keybinds window under the 'Help' menu item
  - [x] Texture support (basic, but it's there)
+ - [ ] Make model loading async and show a loading indicator, instead of blocking the main thread
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)

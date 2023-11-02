@@ -9,6 +9,7 @@ struct Material {
   sampler2D texture_diffuse;
   sampler2D texture_specular;
   sampler2D texture_ambient;
+  sampler2D texture_emission;
 
   vec3 ambient;
   vec3 diffuse;
@@ -61,6 +62,7 @@ uniform DirLight dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform bool useTextures;
+uniform bool hasEmissionTexture;
 
 vec3 CalculateDirLight(DirLight light, vec3 normal, vec3 viewDir) {
   vec3 lightDir = normalize(-light.direction);
@@ -181,6 +183,12 @@ vec3 CalculateSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir
 
 void main()
 {
+  // discard completely transparent fragments, such as the ones used in
+  // leaves or grass textures
+  if (texture(material.texture_diffuse, texCoords).a == 0.0) {
+    discard;
+  }
+
   vec3 norm = normalize(fragNormals);
   vec3 viewDir = normalize(viewPos - fragPos);
 
@@ -193,6 +201,10 @@ void main()
   }
 
   result += CalculateSpotLight(spotLight, norm, fragPos, viewDir);
+
+  if (useTextures && hasEmissionTexture) {
+    result += texture(material.texture_emission, texCoords).rgb;
+  }
 
   FragColor = vec4(result, material.opacity);
 }

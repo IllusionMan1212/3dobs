@@ -126,7 +126,7 @@ impl Mesh {
             shader.set_3fv("material.ambient", self.material.ambient_color);
             shader.set_3fv("material.diffuse", self.material.diffuse_color);
             shader.set_3fv("material.specular", self.material.specular_color);
-            shader.set_float("material.shininess", 32.0);
+            shader.set_float("material.shininess", self.material.specular_exponent);
             shader.set_float("material.opacity", self.material.opacity);
         } else {
             shader.set_3fv("material.ambient", glm::vec3(0.0, 0.0, 0.0));
@@ -136,6 +136,7 @@ impl Mesh {
         if show_textures {
             shader.set_bool("useTextures", self.material.textures.len() > 0);
             for (i, tex) in self.material.textures.iter().enumerate() {
+                shader.set_bool("hasEmissionTexture", false);
                 unsafe {
                     gl::ActiveTexture(gl::TEXTURE0 + i as u32);
                     match tex.typ {
@@ -146,11 +147,13 @@ impl Mesh {
                             shader.set_int("material.texture_diffuse", i as i32);
                         },
                         TextureType::Specular => {
-                            shader.set_int("material.texture_specular{}", i as i32);
+                            shader.set_int("material.texture_specular", i as i32);
                         },
-                        _ => {
-                            warn!("Unsupported texture type: {:?}", tex.typ);
+                        TextureType::Emissive => {
+                            shader.set_int("material.texture_emission", i as i32);
+                            shader.set_bool("hasEmissionTexture", true);
                         },
+                        _ => {},
                     }
 
                     gl::BindTexture(gl::TEXTURE_2D, tex.id);

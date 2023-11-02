@@ -144,7 +144,8 @@ fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Res
                 }
                 Some(MtlToken::DiffuseTexture)
                 | Some(MtlToken::AmbientTexture)
-                | Some(MtlToken::SpecularTexture) => {
+                | Some(MtlToken::SpecularTexture)
+                | Some(MtlToken::EmissiveTexture) => {
                     let tex_type = TextureType::from_material_str(token).unwrap();
 
                     let name = iter.next().unwrap().to_string();
