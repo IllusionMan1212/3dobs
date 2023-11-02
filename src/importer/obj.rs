@@ -2,7 +2,7 @@ use std::{io::{BufReader, BufRead}, collections::HashMap, path::PathBuf};
 
 use log::{error, warn, trace};
 
-use crate::{mesh::Vertex, aabb::AABB, importer::ObjMesh, importer::Object, importer::Material};
+use crate::{mesh::Vertex, aabb::AABB, importer::{ObjMesh, Object, Material, Texture, TextureType}};
 
 const BUF_CAP: usize = 1024 * 128; // 128 Kilobytes
 
@@ -84,7 +84,7 @@ impl MtlToken {
     }
 }
 
-fn parse_mtl(path: &PathBuf) -> Result<HashMap<String, Material>, Box<dyn std::error::Error>> {
+fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Result<HashMap<String, Material>, Box<dyn std::error::Error>> {
     let file = std::fs::File::open(path)?;
     let reader = BufReader::with_capacity(BUF_CAP, file);
     let mut material_name = String::new();
@@ -95,6 +95,7 @@ fn parse_mtl(path: &PathBuf) -> Result<HashMap<String, Material>, Box<dyn std::e
     let mut specular = glm::vec3(0.0, 0.0, 0.0);
     let mut shininess = 32.0;
     let mut opacity = 1.0;
+    let mut mat_textures: Vec<Texture> = Vec::new();
 
     for line in reader.lines() {
         let line = line?;
@@ -109,8 +110,10 @@ fn parse_mtl(path: &PathBuf) -> Result<HashMap<String, Material>, Box<dyn std::e
             match MtlToken::from_str(token) {
                 Some(MtlToken::NewMaterial) => {
                     if !material_name.is_empty() {
-                        material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, HashMap::new());
+                        material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, mat_textures.clone());
                         materials.insert(material_name, material);
+
+                        mat_textures.clear();
                     }
 
                     material_name = iter.next().unwrap().to_string();
@@ -139,15 +142,36 @@ fn parse_mtl(path: &PathBuf) -> Result<HashMap<String, Material>, Box<dyn std::e
                 Some(MtlToken::Opacity) => {
                     opacity = iter.next().unwrap().parse::<f32>().unwrap();
                 }
-                Some(MtlToken::DiffuseTexture) => {
-                    // TODO: textures
+                Some(MtlToken::DiffuseTexture)
+                | Some(MtlToken::AmbientTexture)
+                | Some(MtlToken::SpecularTexture) => {
+                    let tex_type = TextureType::from_material_str(token).unwrap();
+
+                    let name = iter.next().unwrap().to_string();
+                    let mat = if obj_textures.contains_key(&name) {
+                        obj_textures.get(&name).unwrap().clone()
+                    } else {
+                        let path = path.parent().unwrap().join(&name);
+                        let tex = match Texture::new(path, tex_type) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error!("Failed to load texture: {}", e);
+                                continue;
+                            }
+                        };
+
+                        obj_textures.insert(name, tex.clone());
+                        tex
+                    };
+
+                    mat_textures.push(mat);
                 }
                 _ => { warn!("Unhandled material token: {}", token) },
             }
         }
     }
 
-    material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, HashMap::new());
+    material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, mat_textures);
 
     materials.insert(material_name, material);
 
@@ -170,6 +194,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
     let mut current_material: Option<Material> = None;
     let mut min_aabb = glm::vec3(f32::MAX, f32::MAX, f32::MAX);
     let mut max_aabb = glm::vec3(f32::MIN, f32::MIN, f32::MIN);
+    let mut textures = HashMap::new();
 
     for line in reader.lines() {
         let line = line?;
@@ -264,7 +289,8 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                         .map(|i| i.parse::<f32>().unwrap());
                     let u = iter.next().unwrap();
                     let v = iter.next().unwrap();
-                    tex_coords.push(glm::vec2(u, v));
+                    // vertically flip the texcoords because flipping the texture is expensive
+                    tex_coords.push(glm::vec2(u, 1.0 - v));
                 }
                 Some(ObjToken::Face) => {
                     let face = iter.collect::<Vec<_>>();
@@ -372,7 +398,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                 Some(ObjToken::MaterialLib) => {
                     for matlib in iter {
                         let material_path = obj_path.parent().unwrap().join(matlib);
-                        let new_materials = parse_mtl(&material_path);
+                        let new_materials = parse_mtl(&material_path, &mut textures);
                         match new_materials {
                             Ok(m) => {
                                 materials.extend(m);

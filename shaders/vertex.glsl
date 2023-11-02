@@ -10,11 +10,15 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 normalMatrix;
+uniform bool useNormalMatrix;
 
 void main()
 {
   gl_Position = projection * view * model * vec4(aPos, 1.0f);
-  fragNormals = normalMatrix * aNormal;
+  if (useNormalMatrix)
+    fragNormals = normalMatrix * aNormal;
+  else
+    fragNormals = mat3(transpose(inverse(model))) * aNormal;
   fragPos = vec3(model * vec4(aPos, 1.0));
   texCoords = aTexCoords;
 }

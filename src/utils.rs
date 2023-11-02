@@ -22,11 +22,11 @@ impl SupportedFileExtensions {
     }
 }
 
-pub fn load_texture(path: &str) -> Result<u32> {
-    let tex = image::io::Reader::open(path)
-        .with_context(|| format!("Failed to open texture file: {}", path))?
+pub fn load_texture(path: PathBuf) -> Result<u32> {
+    let tex = image::io::Reader::open(path.clone())
+        .with_context(|| format!("Failed to open texture file: {:?}", path))?
         .decode()
-        .with_context(|| format!("Failed to decode texture: {}", path))?;
+        .with_context(|| format!("Failed to decode texture: {:?}", path))?;
 
     let mut texture_id: u32 = 0;
     let format = match tex.color().channel_count() {
@@ -38,6 +38,9 @@ pub fn load_texture(path: &str) -> Result<u32> {
     };
 
     unsafe {
+        // set alignment to 1 since we use u8 for the pixel data type
+        gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+
         gl::GenTextures(1, &mut texture_id);
         gl::BindTexture(gl::TEXTURE_2D, texture_id);
 
@@ -49,6 +52,8 @@ pub fn load_texture(path: &str) -> Result<u32> {
 
         gl::TexImage2D(gl::TEXTURE_2D, 0, format as i32, tex.width() as i32, tex.height() as i32, 0, format, gl::UNSIGNED_BYTE, tex.as_bytes().as_ptr() as *const std::ffi::c_void);
         gl::GenerateMipmap(gl::TEXTURE_2D);
+
+        gl::PixelStorei(gl::UNPACK_ALIGNMENT, 4);
     }
 
     Ok(texture_id)
