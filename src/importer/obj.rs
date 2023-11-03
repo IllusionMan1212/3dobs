@@ -48,6 +48,7 @@ enum MtlToken {
     SpecularExponent,
     Refraction,
     Opacity,
+    Transparency,
     AmbientTexture,
     DiffuseTexture,
     SpecularTexture,
@@ -70,6 +71,7 @@ impl MtlToken {
             "Ns" => Some(MtlToken::SpecularExponent),
             "Ni" => Some(MtlToken::Refraction),
             "d" => Some(MtlToken::Opacity),
+            "Tr" => Some(MtlToken::Transparency),
             "map_Ka" => Some(MtlToken::AmbientTexture),
             "map_Kd" => Some(MtlToken::DiffuseTexture),
             "map_Ks" => Some(MtlToken::SpecularTexture),
@@ -142,6 +144,10 @@ fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Res
                 Some(MtlToken::Opacity) => {
                     opacity = iter.next().unwrap().parse::<f32>().unwrap();
                 }
+                Some(MtlToken::Transparency) => {
+                    // it's just opposite of opacity so we subtract it from 1.0
+                    opacity = 1.0 - iter.next().unwrap().parse::<f32>().unwrap();
+                }
                 Some(MtlToken::DiffuseTexture)
                 | Some(MtlToken::AmbientTexture)
                 | Some(MtlToken::SpecularTexture)
@@ -149,8 +155,11 @@ fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Res
                     let tex_type = TextureType::from_material_str(token).unwrap();
 
                     let name = iter.next().unwrap().to_string();
-                    let mat = if obj_textures.contains_key(&name) {
-                        obj_textures.get(&name).unwrap().clone()
+                    let tex = if obj_textures.contains_key(&name) {
+                        let mut tex = obj_textures.get(&name).unwrap().clone();
+
+                        tex.typ = tex_type;
+                        tex
                     } else {
                         let path = path.parent().unwrap().join(&name);
                         let tex = match Texture::new(path, tex_type) {
