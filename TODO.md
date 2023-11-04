@@ -35,5 +35,9 @@
  - [x] Shortcuts/keybinds window under the 'Help' menu item
  - [x] Texture support (basic, but it's there)
  - [ ] Make model loading async and show a loading indicator, instead of blocking the main thread
+ - [ ] Multi-thread the texture loading and then join all threads before finishing the model loading func
+ - [ ] (BUG) Loading the Kairi model creates a weird red specular on it, and a weird blue specular on the nier model. I imagine other models are also affected
+ - [ ] Add support for .fbx (if it's an easy enough format, otherwise we'll look into something else)
+ - [ ] Draw a gizmo thingy for the light sources in the viewport
 
  - [ ] Bring back the regular camera movement (can maybe be a switch between them) (for later)

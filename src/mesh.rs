@@ -1,5 +1,4 @@
 use glad_gl::gl;
-use log::warn;
 
 use crate::{shader::Shader, utils, importer::{Material, TextureType}};
 
@@ -75,6 +74,14 @@ impl Mesh {
             gl::EnableVertexAttribArray(2);
             gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
 
+            // vertex tangent
+            gl::EnableVertexAttribArray(3);
+            gl::VertexAttribPointer(3, 3, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (8 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
+
+            // vertex bitangent
+            gl::EnableVertexAttribArray(4);
+            gl::VertexAttribPointer(4, 3, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (11 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
+
             gl::BindVertexArray(0);
         }
 
@@ -93,7 +100,7 @@ impl Mesh {
         }
     }
 
-    pub fn draw(&self, shader: &Shader, scale: f32, pivot: glm::Vec3, show_textures: bool) {
+    pub fn draw(&self, shader: &Shader, scale: f32, pivot: glm::Vec3, show_textures: bool, use_normal: bool, use_emissive: bool) {
         shader.use_shader();
 
         let model_mat = glm::ext::scale(&utils::mat_ident(), glm::vec3(scale, scale, scale));
@@ -135,11 +142,13 @@ impl Mesh {
 
         if show_textures {
             shader.set_bool("useTextures", self.material.textures.len() > 0);
-            for (i, tex) in self.material.textures.iter().enumerate() {
-                shader.set_bool("hasEmissionTexture", false);
+            shader.set_bool("hasNormalTexture", false);
+            shader.set_bool("hasEmissionTexture", false);
+            for i in 0..self.material.textures.len() {
                 unsafe {
                     gl::ActiveTexture(gl::TEXTURE0 + i as u32);
-                    match tex.typ {
+                    gl::BindTexture(gl::TEXTURE_2D, self.material.textures[i].id);
+                    match self.material.textures[i].typ {
                         TextureType::Ambient => {
                             shader.set_int("material.texture_ambient", i as i32);
                         },
@@ -150,13 +159,20 @@ impl Mesh {
                             shader.set_int("material.texture_specular", i as i32);
                         },
                         TextureType::Emissive => {
+                            if use_emissive {
+                                shader.set_bool("hasEmissionTexture", true);
+                            }
                             shader.set_int("material.texture_emission", i as i32);
-                            shader.set_bool("hasEmissionTexture", true);
                         },
-                        _ => {},
+                        TextureType::Bump => {
+                            if use_normal {
+                                shader.set_bool("hasNormalTexture", true);
+                            }
+                            shader.set_int("material.texture_normal", i as i32);
+                        },
+                        _ => { continue; },
                     }
 
-                    gl::BindTexture(gl::TEXTURE_2D, tex.id);
                 }
             }
         } else {
@@ -185,12 +201,13 @@ impl Mesh {
 
 impl Drop for Mesh {
     fn drop(&mut self) {
-        // TODO: should we impl a Drop on material to delete the textures from gpu??
         unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
             gl::BindVertexArray(0);
             gl::DeleteBuffers(1, &self.vbo);
             gl::DeleteBuffers(1, &self.ebo);
             gl::DeleteVertexArrays(1, &self.vao);
+            gl::DeleteTextures(self.material.textures.len() as i32, self.material.textures.iter().map(|t| t.id).collect::<Vec<u32>>().as_ptr());
         }
     }
 }
@@ -201,14 +218,18 @@ pub struct Vertex {
     pub position: glm::Vec3,
     pub normal: glm::Vec3,
     pub tex_coords: glm::Vec2,
+    pub tangent: glm::Vec3,
+    pub bitangent: glm::Vec3,
 }
 
 impl Vertex {
-    pub fn new(position: glm::Vec3, normal: glm::Vec3, tex_coords: glm::Vec2) -> Self {
+    pub fn new(position: glm::Vec3, normal: glm::Vec3, tex_coords: glm::Vec2, tangent: glm::Vec3, bitangent: glm::Vec3) -> Self {
         Vertex {
             position,
             normal,
-            tex_coords
+            tex_coords,
+            tangent,
+            bitangent,
         }
     }
 }

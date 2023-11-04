@@ -41,7 +41,7 @@ impl Model {
         return model;
     }
 
-    pub fn draw(&self, shader: &Shader, draw_aabb: bool, show_textures: bool) {
+    pub fn draw(&self, shader: &Shader, draw_aabb: bool, show_textures: bool, use_normal: bool, use_emissive: bool) {
         let center_x = ((self.aabb.max.x / 2.0) + (self.aabb.min.x / 2.0)) * self.scaling_factor;
         let center_y = ((self.aabb.max.y / 2.0) + (self.aabb.min.y / 2.0)) * self.scaling_factor;
         let center_z = ((self.aabb.max.z / 2.0) + (self.aabb.min.z / 2.0)) * self.scaling_factor;
@@ -53,7 +53,7 @@ impl Model {
 
 
         for mesh in &self.meshes {
-            mesh.draw(shader, self.scaling_factor, pivot, show_textures);
+            mesh.draw(shader, self.scaling_factor, pivot, show_textures, use_normal, use_emissive);
         }
 
         if draw_aabb {

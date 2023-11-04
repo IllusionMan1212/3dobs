@@ -1,6 +1,6 @@
 use std::{io::{BufReader, BufRead}, collections::HashMap, path::PathBuf};
 
-use log::{error, warn, trace};
+use log::{error, warn, trace, info};
 
 use crate::{mesh::Vertex, aabb::AABB, importer::{ObjMesh, Object, Material, Texture, TextureType}};
 
@@ -77,7 +77,11 @@ impl MtlToken {
             "map_Ks" => Some(MtlToken::SpecularTexture),
             "map_Ns" => Some(MtlToken::SpecularHighlightTexture),
             "map_Ke" => Some(MtlToken::EmissiveTexture),
-            "map_bump" => Some(MtlToken::BumpTexture),
+            "map_Bump" => Some(MtlToken::BumpTexture),
+            "bump" => Some(MtlToken::BumpTexture),
+            // "map_Kn" => Some(MtlToken::BumpTexture), // non-standard, we don't
+            // yet know if it specifies a bump parameter so we let it log a warning
+            "norm" => Some(MtlToken::BumpTexture),
             "map_d" => Some(MtlToken::DisplacementTexture),
             "decal" => Some(MtlToken::DecalTexture),
             "refl" => Some(MtlToken::ReflectionTexture),
@@ -174,7 +178,49 @@ fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Res
                         tex
                     };
 
-                    mat_textures.push(mat);
+                    mat_textures.push(tex);
+                }
+                Some(MtlToken::BumpTexture) => {
+                    // norm doesn't specify a bump parameter
+                    // map_bump does
+
+                    let mut bm = 1.0;
+                    let mut name = String::new();
+
+                    let next = iter.next().unwrap();
+                    if next == "-bm" {
+                        bm = iter.next().unwrap().parse::<f32>().unwrap();
+                        name = iter.next().unwrap().to_string();
+                    } else {
+                        name = next.to_string();
+
+                        if let Some(possible_bump) = iter.next() {
+                            if possible_bump == "-bm" {
+                                bm = iter.next().unwrap().parse::<f32>().unwrap();
+                            }
+                        }
+                    }
+
+                    let tex = if obj_textures.contains_key(&name) {
+                        let mut tex = obj_textures.get(&name).unwrap().clone();
+                        tex.typ = TextureType::Bump;
+                        tex
+                    } else {
+                        let path = path.parent().unwrap().join(&name);
+                        let tex = match Texture::new(path, TextureType::Bump) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                error!("Failed to load texture: {}", e);
+                                continue;
+                            }
+                        };
+
+                        obj_textures.insert(name, tex.clone());
+                        tex
+                    };
+
+                    // TODO: use bm somewhere
+                    mat_textures.push(tex);
                 }
                 _ => { warn!("Unhandled material token: {}", token) },
             }
@@ -335,7 +381,9 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vert as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
-                                tex_coords: glm::vec2(0.0, 0.0)
+                                tex_coords: glm::vec2(0.0, 0.0),
+                                tangent: glm::vec3(0.0, 0.0, 0.0),
+                                bitangent: glm::vec3(0.0, 0.0, 0.0)
                             });
                         } else if vert.matches("/").count() == 2 {
                             let mut it = vert.split("/");
@@ -360,7 +408,9 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
-                                tex_coords: *tex_coords.get(t_coords as usize).unwrap()
+                                tex_coords: *tex_coords.get(t_coords as usize).unwrap(),
+                                tangent: glm::vec3(0.0, 0.0, 0.0),
+                                bitangent: glm::vec3(0.0, 0.0, 0.0)
                             });
                         } else if vert.matches("/").count() == 1 {
                             let mut it = vert.split("/");
@@ -379,7 +429,9 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             vertices.push(Vertex{
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: calculated_normal,
-                                tex_coords: *tex_coords.get(t_coords as usize).unwrap()
+                                tex_coords: *tex_coords.get(t_coords as usize).unwrap(),
+                                tangent: glm::vec3(0.0, 0.0, 0.0),
+                                bitangent: glm::vec3(0.0, 0.0, 0.0)
                             });
                         } else {
                             let mut vert = vert.parse::<i32>().unwrap();
@@ -392,15 +444,95 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                                 position: *temp_vertices.get(vert as usize).unwrap(),
                                 normal: calculated_normal,
                                 tex_coords: glm::vec2(0.0, 0.0),
+                                tangent: glm::vec3(0.0, 0.0, 0.0),
+                                bitangent: glm::vec3(0.0, 0.0, 0.0)
                             });
                         }
 
-                        // Triangulate faces. 2 triangles per face
+                        // Triangulate faces
                         if i < face.len() - 2 {
                             indices.push(indices_counter);
                             indices.push(indices_counter + i as u32 + 1);
                             indices.push(indices_counter + i as u32 + 2);
                         }
+                    }
+
+
+                    // println!("indices counter: {}", indices_counter);
+                    // println!("indices: {:?}", indices);
+
+                    for i in 0..face.len() - 2 {
+                        // let vert1 = &vertices[indices[indices_counter as usize] as usize];
+                        // let vert2 = &vertices[indices[indices_counter as usize + 1 + i] as usize];
+                        // let vert3 = &vertices[indices[indices_counter as usize + 2 + i] as usize];
+                        // let edge1 = vert2.position - vert1.position;
+                        // let edge2 = vert3.position - vert1.position;
+                        // let delta_uv1 = vert2.tex_coords - vert1.tex_coords;
+                        // let delta_uv2 = vert3.tex_coords - vert1.tex_coords;
+
+                        // let f = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+                        // let tangent = glm::vec3(
+                        //     f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x),
+                        //     f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y),
+                        //     f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z),
+                        // );
+
+                        // let bitangent = glm::vec3(
+                        //     f * (-delta_uv2.x * edge1.x + delta_uv1.x * edge2.x),
+                        //     f * (-delta_uv2.x * edge1.y + delta_uv1.x * edge2.y),
+                        //     f * (-delta_uv2.x * edge1.z + delta_uv1.x * edge2.z),
+                        // );
+
+                        // vertices[indices[indices_counter as usize] as usize].tangent = vertices[indices[indices_counter as usize] as usize].tangent + tangent;
+                        // vertices[indices[indices_counter as usize + 1 + i] as usize].tangent = vertices[indices[indices_counter as usize + 1 + i] as usize].tangent + tangent;
+                        // vertices[indices[indices_counter as usize + 2 + i] as usize].tangent = vertices[indices[indices_counter as usize + 2 + i] as usize].tangent + tangent;
+
+                        // vertices[indices[indices_counter as usize] as usize].bitangent = bitangent;
+                        // vertices[indices[indices_counter as usize + 1 + i] as usize].bitangent = bitangent;
+                        // vertices[indices[indices_counter as usize + 2 + i] as usize].bitangent = bitangent;
+
+                        // println!("tangent: {:?}", tangent);
+                        // println!("bitangent: {:?}", bitangent);
+
+                        let index1 = indices_counter as usize;
+                        let index2 = indices_counter as usize + i + 1;
+                        let index3 = indices_counter as usize + i + 2;
+
+                        let vert1 = &vertices[index1];
+                        let vert2 = &vertices[index2];
+                        let vert3 = &vertices[index3];
+
+                        // println!("vert1: {:?}", vert1);
+                        // println!("vert2: {:?}", vert2);
+                        // println!("vert3: {:?}", vert3);
+
+                        let edge1 = vert2.position - vert1.position;
+                        let edge2 = vert3.position - vert1.position;
+                        let delta_uv1 = vert2.tex_coords - vert1.tex_coords;
+                        let delta_uv2 = vert3.tex_coords - vert1.tex_coords;
+
+                        let f = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+                        let temp_tangent = glm::vec3(
+                            f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x),
+                            f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y),
+                            f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z),
+                        );
+
+                        let tangent = glm::normalize(temp_tangent - vert1.normal * glm::dot(vert1.normal, temp_tangent));
+                        let bitangent = glm::cross(vert1.normal, tangent);
+
+                        vertices[index1].tangent = vertices[index1].tangent + tangent;
+                        vertices[index2].tangent = vertices[index2].tangent + tangent;
+                        vertices[index3].tangent = vertices[index3].tangent + tangent;
+
+                        vertices[index1].bitangent = vertices[index1].bitangent + bitangent;
+                        vertices[index2].bitangent = vertices[index2].bitangent + bitangent;
+                        vertices[index3].bitangent = vertices[index3].bitangent + bitangent;
+
+                        // println!("tangent: {:?}", tangent);
+                        // println!("bitangent: {:?}", bitangent);
                     }
 
                     indices_counter += face.len() as u32;
@@ -457,7 +589,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
         }
     }
     let elapsed = now.elapsed();
-    trace!("Loaded in {}ms",  elapsed.as_millis());
+    info!("Loaded in {}ms",  elapsed.as_millis());
 
     let mesh_name = {
         if current_mesh_name.is_empty() && !object_name.is_empty() {
@@ -468,6 +600,40 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
             "default_mesh".to_string()
         }
     };
+
+    // for i in (0..indices.len()).step_by(3) {
+    //     let index1 = indices[i] as usize;
+    //     let index2 = indices[i + 1] as usize;
+    //     let index3 = indices[i + 2] as usize;
+
+    //     let vert1 = &vertices[index1];
+    //     let vert2 = &vertices[index2];
+    //     let vert3 = &vertices[index3];
+
+    //     let edge1 = vert2.position - vert1.position;
+    //     let edge2 = vert3.position - vert1.position;
+    //     let delta_uv1 = vert2.tex_coords - vert1.tex_coords;
+    //     let delta_uv2 = vert3.tex_coords - vert1.tex_coords;
+
+    //     let f = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+    //     let temp_tangent = glm::vec3(
+    //         f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x),
+    //         f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y),
+    //         f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z),
+    //     );
+
+    //     let tangent = glm::normalize(temp_tangent - vert1.normal * glm::dot(vert1.normal, temp_tangent));
+    //     let bitangent = glm::cross(vert1.normal, tangent);
+
+    //     vertices[index1].tangent = vertices[index1].tangent + tangent;
+    //     vertices[index2].tangent = vertices[index2].tangent + tangent;
+    //     vertices[index3].tangent = vertices[index3].tangent + tangent;
+
+    //     vertices[index1].bitangent = vertices[index1].bitangent + bitangent;
+    //     vertices[index2].bitangent = vertices[index2].bitangent + bitangent;
+    //     vertices[index3].bitangent = vertices[index3].bitangent + bitangent;
+    // }
 
     meshes.push(ObjMesh{
         name: mesh_name,

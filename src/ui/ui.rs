@@ -31,7 +31,9 @@ pub struct State {
     pub logger: logger::WritableLog,
     pub settings: Settings,
     pub fps: f32,
-    pub show_textures: bool
+    pub show_textures: bool,
+    pub show_normal: bool,
+    pub show_emission: bool,
 }
 
 impl Default for State {
@@ -56,7 +58,9 @@ impl Default for State {
             logger: logger::WritableLog::default(),
             settings: Settings::default(),
             fps: 0.0,
-            show_textures: true
+            show_textures: true,
+            show_normal: true,
+            show_emission: true,
         }
     }
 }
@@ -490,6 +494,10 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
             ui.checkbox("FOV zoom", &mut state.fov_zoom);
             ui.same_line();
             ui.checkbox("Show Textures", &mut state.show_textures);
+            ui.same_line();
+            ui.checkbox("Use Normal", &mut state.show_normal);
+            ui.same_line();
+            ui.checkbox("Use Emissive", &mut state.show_emission);
             ui.same_line();
             ui.set_next_item_width(150.0);
             imgui::Drag::new("Camera Speed")

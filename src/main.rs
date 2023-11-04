@@ -147,7 +147,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
         mesh_shader.set_3fv("dirLight.direction", glm::vec3(-0.2, -1.0, -0.3));
         mesh_shader.set_3fv("dirLight.ambient", glm::vec3(0.1, 0.1, 0.1));
-        mesh_shader.set_3fv("dirLight.diffuse", glm::vec3(1.0, 1.0, 1.0));
+        mesh_shader.set_3fv("dirLight.diffuse", glm::vec3(0.5, 0.5, 0.5));
         mesh_shader.set_3fv("dirLight.specular", glm::vec3(1.0, 1.0, 1.0));
 
         let scene_fb = create_scene_framebuffer();
@@ -264,7 +264,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
                 } else {
                     gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
                 }
-                if Some(obj.id) == state.active_model {obj.draw(&mesh_shader, state.draw_aabb, state.show_textures);}
+                if Some(obj.id) == state.active_model {obj.draw(&mesh_shader, state.draw_aabb, state.show_textures, state.show_normal, state.show_emission);}
             }
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
 

@@ -85,6 +85,8 @@ fn parse_ascii_stl(file: std::fs::File) -> Result<Object, Box<dyn std::error::Er
                 position: glm::vec3(vert.x, vert.y, vert.z),
                 normal: glm::vec3(triangle.normal.x, triangle.normal.y, triangle.normal.z),
                 tex_coords,
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
             });
 
             min_aabb = glm::min(min_aabb, vert);
@@ -183,6 +185,8 @@ fn parse_binary_stl(mut file: std::fs::File) -> Result<Object, Box<dyn std::erro
                 position: glm::vec3(vert.x, vert.y, vert.z),
                 normal: glm::vec3(triangle.normal.x, triangle.normal.y, triangle.normal.z),
                 tex_coords,
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
             });
 
             min_aabb = glm::min(min_aabb, vert);

@@ -19,14 +19,62 @@ impl AABB {
         let mut ebo = 0;
 
         let vertices = vec![
-            Vertex { position: glm::vec3(min.x, min.y, min.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, min.y, min.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, max.y, min.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(min.x, max.y, min.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(min.x, min.y, max.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, min.y, max.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, max.y, max.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(min.x, max.y, max.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex {
+                position: glm::vec3(min.x, min.y, min.z),
+                tex_coords: glm::vec2(0.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, min.y, min.z),
+                tex_coords: glm::vec2(1.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, max.y, min.z),
+                tex_coords: glm::vec2(1.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(min.x, max.y, min.z),
+                tex_coords: glm::vec2(0.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(min.x, min.y, max.z),
+                tex_coords: glm::vec2(0.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, min.y, max.z),
+                tex_coords: glm::vec2(1.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, max.y, max.z),
+                tex_coords: glm::vec2(1.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(min.x, max.y, max.z),
+                tex_coords: glm::vec2(0.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+                tangent: glm::vec3(0.0, 0.0, 0.0),
+                bitangent: glm::vec3(0.0, 0.0, 0.0),
+            },
         ];
 
         let indices = vec![
