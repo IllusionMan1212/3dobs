@@ -9,7 +9,8 @@ use crate::{model, ui, importer};
 
 pub enum SupportedFileExtensions {
     OBJ,
-    STL
+    STL,
+    FBX,
 }
 
 impl SupportedFileExtensions {
@@ -17,6 +18,7 @@ impl SupportedFileExtensions {
         match s.to_ascii_lowercase().as_str() {
             "obj" => Some(Self::OBJ),
             "stl" => Some(Self::STL),
+            "fbx" => Some(Self::FBX),
             _ => None
         }
     }

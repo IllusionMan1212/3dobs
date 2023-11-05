@@ -1,5 +1,6 @@
 mod obj;
 mod stl;
+mod fbx;
 
 use std::path::PathBuf;
 
@@ -135,6 +136,7 @@ pub fn load_from_file(path: &PathBuf) -> Result<Object, Box<dyn std::error::Erro
     let obj = match SupportedFileExtensions::from_str(path.extension().unwrap().to_str().unwrap()) {
         Some(SupportedFileExtensions::STL) => stl::load_stl(file)?,
         Some(SupportedFileExtensions::OBJ) => obj::load_obj(path, file)?,
+        Some(SupportedFileExtensions::FBX) => fbx::load_fbx(file)?,
         _ => panic!("Unsupported file extension: {}", path_str),
     };
 
