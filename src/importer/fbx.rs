@@ -12,10 +12,10 @@ struct FbxProperty {
 }
 
 #[derive(Debug)]
-struct FbxRecordNode {
+struct FbxNode {
     name: String,
     properties: Vec<FbxProperty>,
-    children: Vec<FbxRecordNode>,
+    children: Vec<FbxNode>,
 }
 
 struct FbxRecordIterator<R: Read + Seek> {
@@ -31,7 +31,7 @@ impl<R: Read + Seek> FbxRecordIterator<R> {
 }
 
 impl<R: Read + Seek> Iterator for FbxRecordIterator<R> {
-    type Item = FbxRecordNode;
+    type Item = FbxNode;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut children = Vec::new();
@@ -41,22 +41,23 @@ impl<R: Read + Seek> Iterator for FbxRecordIterator<R> {
         let mut num_properties = [0; 4];
         let mut property_list_len = [0; 4];
         let mut name_len = [0; 1];
-        self.reader.read(&mut end_offset).unwrap();
-        self.reader.read(&mut num_properties).unwrap();
-        self.reader.read(&mut property_list_len).unwrap();
-        self.reader.read(&mut name_len).unwrap();
+        self.reader.read_exact(&mut end_offset).unwrap();
+        self.reader.read_exact(&mut num_properties).unwrap();
+        self.reader.read_exact(&mut property_list_len).unwrap();
+        self.reader.read_exact(&mut name_len).unwrap();
 
         let end_offset = u32::from_le_bytes(end_offset);
         let num_properties = u32::from_le_bytes(num_properties);
         let property_list_len = u32::from_le_bytes(property_list_len);
         let name_len = u8::from_le_bytes(name_len);
-        let name = String::from_utf8(self.reader.by_ref().take(name_len as _).bytes().map(|b| b.unwrap()).collect()).unwrap();
 
         if name_len == 0 {
             return None;
         }
 
-        println!("Name: {}", name);
+        let name = String::from_utf8(self.reader.by_ref().take(name_len as _).bytes().map(|b| b.unwrap()).collect()).unwrap();
+
+        // println!("Name: {}", name);
 
         // self.reader.seek_relative(property_list_len as _).unwrap(); // skip the properties
         let properties = parse_properties(self.reader.by_ref(), num_properties, property_list_len);
@@ -69,7 +70,7 @@ impl<R: Read + Seek> Iterator for FbxRecordIterator<R> {
             }
         }
 
-        Some(FbxRecordNode{
+        Some(FbxNode{
             name,
             properties,
             children
@@ -117,7 +118,7 @@ impl TypeCode {
             b'S' => TypeCode::String,
             b'R' => TypeCode::Raw,
 
-            _ => { panic!("Invalid property TypeCode") }
+            _ => { panic!("Invalid property TypeCode: {}", std::str::from_utf8(&[byte]).unwrap()) }
         }
     }
 }
@@ -140,78 +141,168 @@ fn parse_properties<R: Read + Seek>(reader: &mut BufReader<R>, num_properties: u
         let value = match TypeCode::from_byte(type_code) {
             TypeCode::Short => {
                 let mut value = [0; 2];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = i16::from_le_bytes(value);
-                println!("Short: {}", value);
+                // println!("Short: {}", value);
             },
             TypeCode::Bool => {
                 let mut value = [0; 1];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = (u8::from_le_bytes(value) & 1) != 0;
-                println!("Bool: {}", value);
+                // println!("Bool: {}", value);
             },
             TypeCode::Int => {
                 let mut value = [0; 4];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = i32::from_le_bytes(value);
-                println!("Int: {}", value);
+                // println!("Int: {}", value);
             },
             TypeCode::Float => {
                 let mut value = [0; 4];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = f32::from_le_bytes(value);
-                println!("Float: {}", value);
+                // println!("Float: {}", value);
             },
             TypeCode::Double => {
                 let mut value = [0; 8];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = f64::from_le_bytes(value);
-                println!("Double: {}", value);
+                // println!("Double: {}", value);
             },
             TypeCode::Long => {
                 let mut value = [0; 8];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = i64::from_le_bytes(value);
-                println!("Long: {}", value);
+                // println!("Long: {}", value);
             },
 
             // TODO: these are more complicated and could be compressed
             TypeCode::FloatArray => {
-                println!("FloatArray");
+                let mut len = [0; 4];
+                let mut encoding = [0; 4];
+                let mut compressed_len = [0; 4];
+                reader.read_exact(&mut len).unwrap();
+                reader.read_exact(&mut encoding).unwrap();
+                reader.read_exact(&mut compressed_len).unwrap();
+                let len = i32::from_le_bytes(len);
+                let encoding = i32::from_le_bytes(encoding);
+                let compressed_len = i32::from_le_bytes(compressed_len);
+
+                if encoding == 0 {
+                    let mut value = vec![0; len as usize * std::mem::size_of::<f32>()];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("FloatArray: {:?}", value);
+                } else {
+                    let mut value = vec![0; compressed_len as _];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("Compressed FloatArray: {:?}", value);
+                }
             },
             TypeCode::DoubleArray => {
-                println!("DoubleArray");
+                let mut len = [0; 4];
+                let mut encoding = [0; 4];
+                let mut compressed_len = [0; 4];
+                reader.read_exact(&mut len).unwrap();
+                reader.read_exact(&mut encoding).unwrap();
+                reader.read_exact(&mut compressed_len).unwrap();
+                let len = i32::from_le_bytes(len);
+                let encoding = i32::from_le_bytes(encoding);
+                let compressed_len = i32::from_le_bytes(compressed_len);
+
+                if encoding == 0 {
+                    let mut value = vec![0; len as usize * std::mem::size_of::<f64>()];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("DoubleArray: {:?}", value);
+                } else {
+                    let mut value = vec![0; compressed_len as _];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("Compressed DoubleArray: {:?}", value);
+                }
             },
             TypeCode::LongArray => {
-                println!("LongArray");
+                let mut len = [0; 4];
+                let mut encoding = [0; 4];
+                let mut compressed_len = [0; 4];
+                reader.read_exact(&mut len).unwrap();
+                reader.read_exact(&mut encoding).unwrap();
+                reader.read_exact(&mut compressed_len).unwrap();
+                let len = i32::from_le_bytes(len);
+                let encoding = i32::from_le_bytes(encoding);
+                let compressed_len = i32::from_le_bytes(compressed_len);
+
+                if encoding == 0 {
+                    let mut value = vec![0; len as usize * std::mem::size_of::<i64>()];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("LongArray: {:?}", value);
+                } else {
+                    let mut value = vec![0; compressed_len as _];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("Compressed LongArray: {:?}", value);
+                }
             },
             TypeCode::IntArray => {
-                println!("IntArray");
+                let mut len = [0; 4];
+                let mut encoding = [0; 4];
+                let mut compressed_len = [0; 4];
+                reader.read_exact(&mut len).unwrap();
+                reader.read_exact(&mut encoding).unwrap();
+                reader.read_exact(&mut compressed_len).unwrap();
+                let len = i32::from_le_bytes(len);
+                let encoding = i32::from_le_bytes(encoding);
+                let compressed_len = i32::from_le_bytes(compressed_len);
+
+                if encoding == 0 {
+                    let mut value = vec![0; len as usize * std::mem::size_of::<i32>()];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("IntArray: {:?}", value);
+                } else {
+                    let mut value = vec![0; compressed_len as _];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("Compressed IntArray: {:?}", value);
+                }
             },
             TypeCode::BoolArray => {
-                println!("BoolArray");
+                let mut len = [0; 4];
+                let mut encoding = [0; 4];
+                let mut compressed_len = [0; 4];
+                reader.read_exact(&mut len).unwrap();
+                reader.read_exact(&mut encoding).unwrap();
+                reader.read_exact(&mut compressed_len).unwrap();
+                let len = i32::from_le_bytes(len);
+                let encoding = i32::from_le_bytes(encoding);
+                let compressed_len = i32::from_le_bytes(compressed_len);
+
+                if encoding == 0 {
+                    let mut value = vec![0; len as usize * std::mem::size_of::<u8>()];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("BoolArray: {:?}", value);
+                } else {
+                    let mut value = vec![0; compressed_len as _];
+                    reader.read_exact(&mut value).unwrap();
+                    // println!("Compressed BoolArray: {:?}", value);
+                }
             },
 
             TypeCode::String => {
                 let mut len = [0; 4];
-                reader.read(&mut len).unwrap();
+                reader.read_exact(&mut len).unwrap();
                 let len = i32::from_le_bytes(len);
 
                 let mut value = vec![0; len as _];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
                 let value = String::from_utf8(value).unwrap();
 
-                println!("String: {}", value);
+                // println!("String: {}", value);
             },
             TypeCode::Raw => {
                 let mut len = [0; 4];
-                reader.read(&mut len).unwrap();
+                reader.read_exact(&mut len).unwrap();
                 let len = i32::from_le_bytes(len);
 
                 let mut value = vec![0; len as _];
-                reader.read(&mut value).unwrap();
+                reader.read_exact(&mut value).unwrap();
 
-                println!("Raw: {:?}", value);
+                // println!("Raw: {:?}", value);
             },
         };
 
@@ -234,6 +325,7 @@ fn parse_binary_fbx(mut file: std::fs::File) -> Result<Object, Box<dyn std::erro
 
     file.seek(std::io::SeekFrom::Current(6))?; // skip the rest of the header
 
+    let now = std::time::Instant::now();
     let fbx_nodes = FbxRecordIterator::new(BufReader::new(file));
 
     // skip the first record node because it's the header extension node
@@ -241,6 +333,8 @@ fn parse_binary_fbx(mut file: std::fs::File) -> Result<Object, Box<dyn std::erro
     for node in fbx_nodes {
         // println!("node: {:?}", node);
     }
+    let elapsed = now.elapsed();
+    info!("Loaded in {} ms", elapsed.as_millis());
 
     todo!();
     // Ok(Object {
@@ -258,15 +352,12 @@ pub fn load_fbx(mut file: std::fs::File) -> Result<Object, Box<dyn std::error::E
     let mut magic: [u8; 21] = [0; 21];
     let _ = file.read_exact(&mut magic);
 
-    let now = std::time::Instant::now();
     let obj = if is_binary(&magic) {
         parse_binary_fbx(file)?
     } else {
         file.seek(std::io::SeekFrom::Start(0))?;
         parse_ascii_fbx()?
     };
-    let elapsed = now.elapsed();
-    info!("Loaded in {} ms", elapsed.as_millis());
 
     Ok(obj)
 }
