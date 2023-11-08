@@ -10,7 +10,7 @@ use simplelog::*;
 use threedobs::{shader, ui::ui, utils, ipc};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
-    let logger = threedobs::logger::WritableLog::default();
+    let in_program_logger = threedobs::logger::WritableLog::default();
 
     let log_conf = ConfigBuilder::default()
         .set_target_level(LevelFilter::Error)
@@ -40,7 +40,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         vec![
         TermLogger::new(log_level, log_conf.clone(), TerminalMode::Mixed, ColorChoice::Auto),
         WriteLogger::new(log_level, log_conf, File::create("3dobs.log")?),
-        WriteLogger::new(log_level, in_program_log_conf, logger.clone())
+        WriteLogger::new(log_level, in_program_log_conf, in_program_logger.clone())
         ]
     ).unwrap();
 
@@ -72,7 +72,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
     let mut state = ui::State{
         settings,
-        logger,
+        logger: in_program_logger,
         ..Default::default()
     };
 

@@ -111,9 +111,10 @@ pub fn import_model(state: &mut State) {
     let models = match rfd::FileDialog::new()
         .set_title("Import Model(s)")
         .set_directory("./")
-        .add_filter("All supported files", &["obj", "OBJ", "stl", "STL"])
+        .add_filter("All supported files", &["obj", "OBJ", "stl", "STL", "dae", "DAE"])
         .add_filter("Wavefront OBJ (.obj)", &["obj", "OBJ"])
         .add_filter("STL (.stl)", &["stl", "STL"])
+        .add_filter("COLLADA (.dae)", &["dae", "DAE"])
         .pick_files() {
             Some(m) => m,
             None => return,
