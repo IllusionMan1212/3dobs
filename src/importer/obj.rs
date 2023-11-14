@@ -1,8 +1,16 @@
-use std::{io::{BufReader, BufRead}, collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    io::{BufRead, BufReader},
+    path::PathBuf,
+};
 
-use log::{error, warn, trace};
+use log::{error, trace, warn};
 
-use crate::{mesh::Vertex, aabb::AABB, importer::{ObjMesh, Object, Material, Texture, TextureType}};
+use crate::{
+    aabb::AABB,
+    importer::{Material, ObjMesh, Object, Texture, TextureType},
+    mesh::Vertex,
+};
 
 const BUF_CAP: usize = 1024 * 128; // 128 Kilobytes
 
@@ -86,7 +94,10 @@ impl MtlToken {
     }
 }
 
-fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Result<HashMap<String, Material>, Box<dyn std::error::Error>> {
+fn parse_mtl(
+    path: &PathBuf,
+    obj_textures: &mut HashMap<String, Texture>,
+) -> Result<HashMap<String, Material>, Box<dyn std::error::Error>> {
     let file = std::fs::File::open(path)?;
     let reader = BufReader::with_capacity(BUF_CAP, file);
     let mut material_name = String::new();
@@ -112,7 +123,15 @@ fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Res
             match MtlToken::from_str(token) {
                 Some(MtlToken::NewMaterial) => {
                     if !material_name.is_empty() {
-                        material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, mat_textures.clone());
+                        material = Material::new(
+                            material_name.clone(),
+                            ambient,
+                            diffuse,
+                            specular,
+                            shininess,
+                            opacity,
+                            mat_textures.clone(),
+                        );
                         materials.insert(material_name, material);
 
                         mat_textures.clear();
@@ -176,19 +195,32 @@ fn parse_mtl(path: &PathBuf, obj_textures: &mut HashMap<String, Texture>) -> Res
 
                     mat_textures.push(tex);
                 }
-                _ => { warn!("Unhandled material token: {}", token) },
+                _ => {
+                    warn!("Unhandled material token: {}", token)
+                }
             }
         }
     }
 
-    material = Material::new(material_name.clone(), ambient, diffuse, specular, shininess, opacity, mat_textures);
+    material = Material::new(
+        material_name.clone(),
+        ambient,
+        diffuse,
+        specular,
+        shininess,
+        opacity,
+        mat_textures,
+    );
 
     materials.insert(material_name, material);
 
     Ok(materials)
 }
 
-pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<dyn std::error::Error>> {
+pub fn load_obj(
+    obj_path: &PathBuf,
+    file: std::fs::File,
+) -> Result<Object, Box<dyn std::error::Error>> {
     let now = std::time::Instant::now();
     let reader = BufReader::with_capacity(BUF_CAP, file);
     let mut object_name = String::new();
@@ -226,11 +258,11 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                         }
                     };
                     if !vertices.is_empty() {
-                        meshes.push(ObjMesh{
+                        meshes.push(ObjMesh {
                             name,
                             vertices: vertices.clone(),
                             indices: indices.clone(),
-                            material: current_material.clone()
+                            material: current_material.clone(),
                         });
                     }
                     vertices.clear();
@@ -248,11 +280,11 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                         }
                     };
                     if !vertices.is_empty() {
-                        meshes.push(ObjMesh{
+                        meshes.push(ObjMesh {
                             name,
                             vertices: vertices.clone(),
                             indices: indices.clone(),
-                            material: current_material.clone()
+                            material: current_material.clone(),
                         });
                     }
                     vertices.clear();
@@ -264,12 +296,13 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                 Some(ObjToken::Vertex) => {
                     let vec = iter.collect::<Vec<_>>();
                     if vec.len() < 3 {
-                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Incomplete vertex data")));
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Incomplete vertex data",
+                        )));
                     }
 
-                    let mut iter = vec.iter()
-                        .take(3)
-                        .map(|i| i.parse::<f32>().unwrap());
+                    let mut iter = vec.iter().take(3).map(|i| i.parse::<f32>().unwrap());
                     let x = iter.next().unwrap();
                     let y = iter.next().unwrap();
                     let z = iter.next().unwrap();
@@ -277,26 +310,24 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
 
                     min_aabb = glm::vec3(min_aabb.x.min(x), min_aabb.y.min(y), min_aabb.z.min(z));
                     max_aabb = glm::vec3(max_aabb.x.max(x), max_aabb.y.max(y), max_aabb.z.max(z));
-
                 }
                 Some(ObjToken::Normal) => {
                     let vec = iter.collect::<Vec<_>>();
                     if vec.len() < 3 {
-                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Incomplete vertex normal data")));
+                        return Err(Box::new(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Incomplete vertex normal data",
+                        )));
                     }
 
-                    let mut iter = vec.iter()
-                        .take(3)
-                        .map(|i| i.parse::<f32>().unwrap());
+                    let mut iter = vec.iter().take(3).map(|i| i.parse::<f32>().unwrap());
                     let x = iter.next().unwrap();
                     let y = iter.next().unwrap();
                     let z = iter.next().unwrap();
                     normals.push(glm::vec3(x, y, z));
                 }
                 Some(ObjToken::TexCoord) => {
-                    let mut iter = iter
-                        .take(2)
-                        .map(|i| i.parse::<f32>().unwrap());
+                    let mut iter = iter.take(2).map(|i| i.parse::<f32>().unwrap());
                     let u = iter.next().unwrap();
                     let v = iter.next().unwrap();
                     // vertically flip the texcoords because flipping the texture is expensive
@@ -312,8 +343,10 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                         let part2 = face[2].split("/").next().unwrap();
 
                         calculated_normal = glm::normalize(glm::cross(
-                            temp_vertices[part1.parse::<i32>().unwrap() as usize - 1] - temp_vertices[part0.parse::<i32>().unwrap() as usize - 1],
-                            temp_vertices[part2.parse::<i32>().unwrap() as usize - 1] - temp_vertices[part0.parse::<i32>().unwrap() as usize - 1]
+                            temp_vertices[part1.parse::<i32>().unwrap() as usize - 1]
+                                - temp_vertices[part0.parse::<i32>().unwrap() as usize - 1],
+                            temp_vertices[part2.parse::<i32>().unwrap() as usize - 1]
+                                - temp_vertices[part0.parse::<i32>().unwrap() as usize - 1],
                         ));
                     }
 
@@ -332,10 +365,10 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 normal -= 1;
                             }
-                            vertices.push(Vertex{
+                            vertices.push(Vertex {
                                 position: *temp_vertices.get(vert as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
-                                tex_coords: glm::vec2(0.0, 0.0)
+                                tex_coords: glm::vec2(0.0, 0.0),
                             });
                         } else if vert.matches("/").count() == 2 {
                             let mut it = vert.split("/");
@@ -357,10 +390,10 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 normal -= 1;
                             }
-                            vertices.push(Vertex{
+                            vertices.push(Vertex {
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: *normals.get(normal as usize).unwrap(),
-                                tex_coords: *tex_coords.get(t_coords as usize).unwrap()
+                                tex_coords: *tex_coords.get(t_coords as usize).unwrap(),
                             });
                         } else if vert.matches("/").count() == 1 {
                             let mut it = vert.split("/");
@@ -376,10 +409,10 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 t_coords -= 1;
                             }
-                            vertices.push(Vertex{
+                            vertices.push(Vertex {
                                 position: *temp_vertices.get(vertex as usize).unwrap(),
                                 normal: calculated_normal,
-                                tex_coords: *tex_coords.get(t_coords as usize).unwrap()
+                                tex_coords: *tex_coords.get(t_coords as usize).unwrap(),
                             });
                         } else {
                             let mut vert = vert.parse::<i32>().unwrap();
@@ -388,7 +421,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                             } else {
                                 vert -= 1;
                             }
-                            vertices.push(Vertex{
+                            vertices.push(Vertex {
                                 position: *temp_vertices.get(vert as usize).unwrap(),
                                 normal: calculated_normal,
                                 tex_coords: glm::vec2(0.0, 0.0),
@@ -412,7 +445,7 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                         match new_materials {
                             Ok(m) => {
                                 materials.extend(m);
-                            },
+                            }
                             Err(e) => {
                                 error!("Failed to parse mtl file {:?}: {}", material_path, e);
                             }
@@ -431,11 +464,11 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                         }
                     };
                     if !vertices.is_empty() {
-                        meshes.push(ObjMesh{
+                        meshes.push(ObjMesh {
                             name,
                             vertices: vertices.clone(),
                             indices: indices.clone(),
-                            material: current_material.clone()
+                            material: current_material.clone(),
                         });
                     }
                     vertices.clear();
@@ -452,12 +485,14 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
                 Some(ObjToken::SmoothShading) => {
                     // idc about this
                 }
-                _ => { warn!("Unhandled obj token: {}", token) },
+                _ => {
+                    warn!("Unhandled obj token: {}", token)
+                }
             }
         }
     }
     let elapsed = now.elapsed();
-    trace!("Loaded in {}ms",  elapsed.as_millis());
+    trace!("Loaded in {}ms", elapsed.as_millis());
 
     let mesh_name = {
         if current_mesh_name.is_empty() && !object_name.is_empty() {
@@ -469,16 +504,16 @@ pub fn load_obj(obj_path: &PathBuf, file: std::fs::File) -> Result<Object, Box<d
         }
     };
 
-    meshes.push(ObjMesh{
+    meshes.push(ObjMesh {
         name: mesh_name,
         vertices: vertices.clone(),
         indices: indices.clone(),
-        material: current_material
+        material: current_material,
     });
 
     let aabb = AABB::new(min_aabb, max_aabb);
 
-    Ok(Object{
+    Ok(Object {
         name: object_name,
         meshes,
         aabb,

@@ -19,14 +19,46 @@ impl AABB {
         let mut ebo = 0;
 
         let vertices = vec![
-            Vertex { position: glm::vec3(min.x, min.y, min.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, min.y, min.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, max.y, min.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(min.x, max.y, min.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(min.x, min.y, max.z), tex_coords: glm::vec2(0.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, min.y, max.z), tex_coords: glm::vec2(1.0, 0.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(max.x, max.y, max.z), tex_coords: glm::vec2(1.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
-            Vertex { position: glm::vec3(min.x, max.y, max.z), tex_coords: glm::vec2(0.0, 1.0), normal: glm::vec3(0.0, 0.0, 0.0) },
+            Vertex {
+                position: glm::vec3(min.x, min.y, min.z),
+                tex_coords: glm::vec2(0.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, min.y, min.z),
+                tex_coords: glm::vec2(1.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, max.y, min.z),
+                tex_coords: glm::vec2(1.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(min.x, max.y, min.z),
+                tex_coords: glm::vec2(0.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(min.x, min.y, max.z),
+                tex_coords: glm::vec2(0.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, min.y, max.z),
+                tex_coords: glm::vec2(1.0, 0.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(max.x, max.y, max.z),
+                tex_coords: glm::vec2(1.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
+            Vertex {
+                position: glm::vec3(min.x, max.y, max.z),
+                tex_coords: glm::vec2(0.0, 1.0),
+                normal: glm::vec3(0.0, 0.0, 0.0),
+            },
         ];
 
         let indices = vec![
@@ -46,22 +78,53 @@ impl AABB {
             gl::BindVertexArray(vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-            gl::BufferData(gl::ARRAY_BUFFER, (std::mem::size_of::<Vertex>() * vertices.len() as usize) as isize, vertices.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (std::mem::size_of::<Vertex>() * vertices.len() as usize) as isize,
+                vertices.as_ptr() as *const std::ffi::c_void,
+                gl::STATIC_DRAW,
+            );
 
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (std::mem::size_of::<u32>() * indices.len() as usize) as isize, indices.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (std::mem::size_of::<u32>() * indices.len() as usize) as isize,
+                indices.as_ptr() as *const std::ffi::c_void,
+                gl::STATIC_DRAW,
+            );
 
             // vertex positions
             gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, std::ptr::null());
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                std::ptr::null(),
+            );
 
             // vertex normals
             gl::EnableVertexAttribArray(1);
-            gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
 
             // vertex texture coords
             gl::EnableVertexAttribArray(2);
-            gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
+            gl::VertexAttribPointer(
+                2,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
 
             gl::BindVertexArray(0);
         }
@@ -72,7 +135,7 @@ impl AABB {
             indices_len: indices.len() as u32,
             vao,
             vbo,
-            ebo
+            ebo,
         }
     }
 
@@ -88,7 +151,12 @@ impl AABB {
             gl::BindVertexArray(self.vao);
             gl::LineWidth(5.0);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
-            gl::DrawElements(gl::TRIANGLES, self.indices_len as i32, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawElements(
+                gl::TRIANGLES,
+                self.indices_len as i32,
+                gl::UNSIGNED_INT,
+                std::ptr::null(),
+            );
 
             // reset stuff to default
             gl::BindVertexArray(0);

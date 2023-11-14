@@ -54,7 +54,10 @@ struct Clipboard {
 impl imgui::ClipboardBackend for Clipboard {
     fn set(&mut self, s: &str) {
         unsafe {
-            glfw::ffi::glfwSetClipboardString(self.window_ptr, s.as_ptr() as *const std::ffi::c_char);
+            glfw::ffi::glfwSetClipboardString(
+                self.window_ptr,
+                s.as_ptr() as *const std::ffi::c_char,
+            );
         }
     }
     fn get(&mut self) -> std::option::Option<String> {

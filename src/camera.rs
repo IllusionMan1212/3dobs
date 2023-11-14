@@ -30,7 +30,9 @@ impl Camera {
     }
 
     pub fn handle_mouse_scroll(&mut self, yoffset: f32, can_capture_cursor: bool, fov_zoom: bool) {
-        if !can_capture_cursor { return }
+        if !can_capture_cursor {
+            return;
+        }
         if fov_zoom {
             self.fov -= yoffset;
 
@@ -41,7 +43,8 @@ impl Camera {
                 self.fov = 85.0;
             }
         } else {
-            self.position = self.position + (self.front * self._speed) + glm::vec3(0.0, 0.0, -yoffset);
+            self.position =
+                self.position + (self.front * self._speed) + glm::vec3(0.0, 0.0, -yoffset);
         }
     }
 
@@ -56,13 +59,19 @@ impl Camera {
         self._speed = self.speed * delta_time;
     }
 
-    pub fn focus_on_selected_model(&mut self, active_model: Option<u32>, objects: &Vec<model::Model>) {
+    pub fn focus_on_selected_model(
+        &mut self,
+        active_model: Option<u32>,
+        objects: &Vec<model::Model>,
+    ) {
         if let Some(id) = active_model {
             for obj in objects {
                 if obj.id == id {
                     // we scale the center of the object since the model (and therefore the AABB) is scaled
-                    let center_x = ((obj.aabb.max.x / 2.0) + (obj.aabb.min.x / 2.0)) * obj.scaling_factor;
-                    let center_y = ((obj.aabb.max.y / 2.0) + (obj.aabb.min.y / 2.0)) * obj.scaling_factor;
+                    let center_x =
+                        ((obj.aabb.max.x / 2.0) + (obj.aabb.min.x / 2.0)) * obj.scaling_factor;
+                    let center_y =
+                        ((obj.aabb.max.y / 2.0) + (obj.aabb.min.y / 2.0)) * obj.scaling_factor;
                     let z = obj.aabb.max.z * obj.scaling_factor + 10.0;
                     self.position = glm::vec3(center_x, center_y, z);
                     self.front = glm::vec3(0.0, 0.0, -1.0);
@@ -72,4 +81,3 @@ impl Camera {
         }
     }
 }
-

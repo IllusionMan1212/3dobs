@@ -1,4 +1,10 @@
-use crate::{mesh::{Mesh, apply_rotation}, shader::Shader, utils, ui::ui, aabb, importer};
+use crate::{
+    aabb, importer,
+    mesh::{apply_rotation, Mesh},
+    shader::Shader,
+    ui::ui,
+    utils,
+};
 
 const SCALING_FACTOR: f32 = 8.0;
 
@@ -24,7 +30,12 @@ impl Model {
         let scale = scale_factor_x.min(scale_factor_y).min(scale_factor_z);
 
         for mesh in obj.meshes.into_iter() {
-            meshes.push(Mesh::new(&mesh.name, mesh.vertices, mesh.indices, mesh.material));
+            meshes.push(Mesh::new(
+                &mesh.name,
+                mesh.vertices,
+                mesh.indices,
+                mesh.material,
+            ));
         }
 
         let mut model = Model {
@@ -47,10 +58,23 @@ impl Model {
         let center_z = ((self.aabb.max.z / 2.0) + (self.aabb.min.z / 2.0)) * self.scaling_factor;
         let pivot = glm::vec3(center_x, center_y, center_z);
 
-        let model_mat = glm::ext::scale(&utils::mat_ident(), glm::vec3(self.scaling_factor, self.scaling_factor, self.scaling_factor));
+        let model_mat = glm::ext::scale(
+            &utils::mat_ident(),
+            glm::vec3(
+                self.scaling_factor,
+                self.scaling_factor,
+                self.scaling_factor,
+            ),
+        );
         let model_mat = apply_rotation(&model_mat, self.meshes[0].rotation, pivot);
-        let model_mat = glm::ext::translate(&model_mat, glm::vec3(self.meshes[0].position.x, self.meshes[0].position.y, self.meshes[0].position.z));
-
+        let model_mat = glm::ext::translate(
+            &model_mat,
+            glm::vec3(
+                self.meshes[0].position.x,
+                self.meshes[0].position.y,
+                self.meshes[0].position.z,
+            ),
+        );
 
         for mesh in &self.meshes {
             mesh.draw(shader, self.scaling_factor, pivot, show_textures);

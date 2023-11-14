@@ -1,13 +1,13 @@
-use std::fs::File;
 use std::env;
+use std::fs::File;
 use std::path::PathBuf;
 
-use glfw::{Action, Context, Key, Modifiers};
-use glad_gl::gl;
 use anyhow;
+use glad_gl::gl;
+use glfw::{Action, Context, Key, Modifiers};
 use simplelog::*;
 
-use threedobs::{shader, ui::ui, utils, ipc};
+use threedobs::{ipc, shader, ui::ui, utils};
 
 fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     let logger = threedobs::logger::WritableLog::default();
@@ -36,13 +36,17 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         LevelFilter::Info
     };
 
-    CombinedLogger::init(
-        vec![
-        TermLogger::new(log_level, log_conf.clone(), TerminalMode::Mixed, ColorChoice::Auto),
+    CombinedLogger::init(vec![
+        TermLogger::new(
+            log_level,
+            log_conf.clone(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
         WriteLogger::new(log_level, log_conf, File::create("3dobs.log")?),
-        WriteLogger::new(log_level, in_program_log_conf, logger.clone())
-        ]
-    ).unwrap();
+        WriteLogger::new(log_level, in_program_log_conf, logger.clone()),
+    ])
+    .unwrap();
 
     let settings: ui::Settings = confy::load("3dobs", "settings")?;
 
@@ -64,13 +68,15 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core);
     glfw::WindowHint::OpenGlForwardCompat(true);
 
-    let (mut window, events) = glfw.create_window(1200, 800, "3dobs", glfw::WindowMode::Windowed).expect("Failed to create GLFW window");
+    let (mut window, events) = glfw
+        .create_window(1200, 800, "3dobs", glfw::WindowMode::Windowed)
+        .expect("Failed to create GLFW window");
 
     window.set_all_polling(true);
     window.set_cursor_mode(glfw::CursorMode::Disabled);
     window.make_current();
 
-    let mut state = ui::State{
+    let mut state = ui::State {
         settings,
         logger,
         ..Default::default()
@@ -81,25 +87,25 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
     let (mut imgui, glfw_platform, renderer) = ui::init_imgui(&mut window);
 
     let mesh_shader = shader::Shader::new(
-        &mut shader::ShaderSource{
+        &mut shader::ShaderSource {
             name: "vertex.glsl".to_string(),
             source: include_str!("../shaders/vertex.glsl").to_string(),
         },
-        &mut shader::ShaderSource{
+        &mut shader::ShaderSource {
             name: "frag.glsl".to_string(),
             source: include_str!("../shaders/frag.glsl").to_string(),
         },
-        )?;
+    )?;
     let grid_shader = shader::Shader::new(
-        &mut shader::ShaderSource{
+        &mut shader::ShaderSource {
             name: "grid_v.glsl".to_string(),
             source: include_str!("../shaders/grid_v.glsl").to_string(),
         },
-        &mut shader::ShaderSource{
+        &mut shader::ShaderSource {
             name: "grid_f.glsl".to_string(),
             source: include_str!("../shaders/grid_f.glsl").to_string(),
         },
-        )?;
+    )?;
 
     let points_lights: [glm::Vec3; 4] = [
         glm::vec3(0.7, 0.2, 2.0),
@@ -132,9 +138,18 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             mesh_shader.set_float(&format!("pointLights[{}].linear", i), 0.09);
             mesh_shader.set_float(&format!("pointLights[{}].quadratic", i), 0.032);
 
-            mesh_shader.set_3fv(&format!("pointLights[{}].ambient", i), glm::vec3(0.1, 0.1, 0.1));
-            mesh_shader.set_3fv(&format!("pointLights[{}].diffuse", i), glm::vec3(0.7, 0.7, 0.7));
-            mesh_shader.set_3fv(&format!("pointLights[{}].specular", i), glm::vec3(1.0, 1.0, 1.0));
+            mesh_shader.set_3fv(
+                &format!("pointLights[{}].ambient", i),
+                glm::vec3(0.1, 0.1, 0.1),
+            );
+            mesh_shader.set_3fv(
+                &format!("pointLights[{}].diffuse", i),
+                glm::vec3(0.7, 0.7, 0.7),
+            );
+            mesh_shader.set_3fv(
+                &format!("pointLights[{}].specular", i),
+                glm::vec3(1.0, 1.0, 1.0),
+            );
         }
         mesh_shader.set_float("spotLight.cutOff", glm::cos(glm::radians(12.5)));
         mesh_shader.set_float("spotLight.outerCutOff", glm::cos(glm::radians(15.0)));
@@ -164,7 +179,9 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             delta_time = current_frame - last_frame;
             last_frame = current_frame;
 
-            imgui.io_mut().update_delta_time(std::time::Duration::from_secs_f32(delta_time));
+            imgui
+                .io_mut()
+                .update_delta_time(std::time::Duration::from_secs_f32(delta_time));
 
             state.camera.update_speed(delta_time);
 
@@ -176,26 +193,32 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             }
 
             // camera matrices
-            let view_mat = glm::ext::look_at(state.camera.position, state.camera.position + state.camera.front, state.camera.up);
-            let projection_mat = glm::ext::perspective(glm::radians(state.camera.fov), state.viewport_size[0] / state.viewport_size[1], 0.01, 200.0);
+            let view_mat = glm::ext::look_at(
+                state.camera.position,
+                state.camera.position + state.camera.front,
+                state.camera.up,
+            );
+            let projection_mat = glm::ext::perspective(
+                glm::radians(state.camera.fov),
+                state.viewport_size[0] / state.viewport_size[1],
+                0.01,
+                200.0,
+            );
 
             if let Some(rx) = &ipc_rx {
                 match rx.try_recv() {
                     Ok(paths) => {
                         window.focus();
                         utils::import_models_from_paths(&paths, &mut state);
-                    },
-                    Err(e) => {
-                        match e {
-                            std::sync::mpsc::TryRecvError::Empty => {},
-                            std::sync::mpsc::TryRecvError::Disconnected => {
-                                panic!("Error: IPC thread channel disconnected");
-                            }
-                        }
                     }
+                    Err(e) => match e {
+                        std::sync::mpsc::TryRecvError::Empty => {}
+                        std::sync::mpsc::TryRecvError::Disconnected => {
+                            panic!("Error: IPC thread channel disconnected");
+                        }
+                    },
                 }
             }
-            
 
             for (_, event) in glfw::flush_messages(&events) {
                 // order of handling events is important here
@@ -219,14 +242,22 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
                         last_x = xpos as f32;
                         last_y = ypos as f32;
 
-                        if state.can_capture_cursor && window.get_mouse_button(glfw::MouseButtonLeft) == Action::Press {
+                        if state.can_capture_cursor
+                            && window.get_mouse_button(glfw::MouseButtonLeft) == Action::Press
+                        {
                             if window.get_key(glfw::Key::LeftShift) == Action::Press {
                                 state.camera.move_camera(-xoffset, -yoffset);
                             } else {
                                 if let Some(active_model) = state.active_model {
-                                    let x_rotation = xoffset * state.camera.sensitivity * state.rotation_speed;
-                                    let y_rotation = yoffset * state.camera.sensitivity * state.rotation_speed;
-                                    let model = state.objects.iter_mut().find(|m| m.id == active_model).unwrap();
+                                    let x_rotation =
+                                        xoffset * state.camera.sensitivity * state.rotation_speed;
+                                    let y_rotation =
+                                        yoffset * state.camera.sensitivity * state.rotation_speed;
+                                    let model = state
+                                        .objects
+                                        .iter_mut()
+                                        .find(|m| m.id == active_model)
+                                        .unwrap();
                                     // let x_rotation = glm::quat_angle_axis(xoffset * state.camera.sensitivity, &state.camera.up);
                                     model.rotate(x_rotation, y_rotation);
                                 }
@@ -258,18 +289,27 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             mesh_shader.set_3fv("spotLight.direction", state.camera.front);
             mesh_shader.set_3fv("viewPos", state.camera.position);
 
+            // BUG: for objects with semi-transparent materials/textures, the order of drawing is important.
+            // We must draw all opaque objects/meshes first, then perform a depth/distance sort
+            // on all semi-transparent objects/meshes and draw them in order from farthest to closest.
+            // Alternatively. We could implement a dual-depth peeling algorithm
+            // which seems to be a good one and done solution and is order independent.
             for obj in &state.objects {
                 if state.wireframe {
                     gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
                 } else {
                     gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
                 }
-                if Some(obj.id) == state.active_model {obj.draw(&mesh_shader, state.draw_aabb, state.show_textures);}
+                if Some(obj.id) == state.active_model {
+                    obj.draw(&mesh_shader, state.draw_aabb, state.show_textures);
+                }
             }
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
 
             // draw grid
-            if state.draw_grid {draw_grid(&grid_shader, &view_mat, &projection_mat);}
+            if state.draw_grid {
+                draw_grid(&grid_shader, &view_mat, &projection_mat);
+            }
 
             //
             // draw ui
@@ -279,7 +319,15 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::Disable(gl::DEPTH_TEST);
             gl::Disable(gl::BLEND);
-            ui::draw_ui(&mut imgui, &renderer, &glfw_platform, &mut window, &mut state, &mut last_cursor, scene_texture);
+            ui::draw_ui(
+                &mut imgui,
+                &renderer,
+                &glfw_platform,
+                &mut window,
+                &mut state,
+                &mut last_cursor,
+                scene_texture,
+            );
 
             glfw.poll_events();
             window.swap_buffers();
@@ -303,7 +351,11 @@ fn draw_grid(shader: &threedobs::shader::Shader, view_mat: &glm::Mat4, projectio
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: &glfw::WindowEvent, state: &mut ui::State) {
+fn handle_window_event(
+    window: &mut glfw::Window,
+    event: &glfw::WindowEvent,
+    state: &mut ui::State,
+) {
     match event {
         glfw::WindowEvent::Key(Key::O, _, Action::Press, Modifiers::Control) => {
             ui::import_model(state);
@@ -318,26 +370,32 @@ fn handle_window_event(window: &mut glfw::Window, event: &glfw::WindowEvent, sta
             state.camera.speed /= 5.0;
         }
         glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
-            if !state.can_capture_cursor { return; }
+            if !state.can_capture_cursor {
+                return;
+            }
             state.is_cursor_captured = true;
             window.set_cursor_mode(glfw::CursorMode::Disabled);
         }
         glfw::WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Release, _) => {
-            if !state.can_capture_cursor { return; }
+            if !state.can_capture_cursor {
+                return;
+            }
             state.is_cursor_captured = false;
             window.set_cursor_mode(glfw::CursorMode::Normal);
         }
         glfw::WindowEvent::Scroll(_, yoff) => {
-            state.camera.handle_mouse_scroll(*yoff as f32, state.can_capture_cursor, state.fov_zoom);
+            state.camera.handle_mouse_scroll(
+                *yoff as f32,
+                state.can_capture_cursor,
+                state.fov_zoom,
+            );
         }
         glfw::WindowEvent::FileDrop(paths) => {
             utils::import_models_from_paths(paths, state);
         }
-        glfw::WindowEvent::FramebufferSize(w, h) => {
-            unsafe {
-                gl::Viewport(0, 0, *w, *h);
-            }
-        }
+        glfw::WindowEvent::FramebufferSize(w, h) => unsafe {
+            gl::Viewport(0, 0, *w, *h);
+        },
         _ => {}
     }
 }
@@ -367,15 +425,36 @@ fn create_scene_texture_and_renderbuffer(window: &glfw::Window, fbo: u32) -> (u3
 
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGB as i32, w, h, 0, gl::RGB, gl::UNSIGNED_BYTE, std::ptr::null());
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGB as i32,
+            w,
+            h,
+            0,
+            gl::RGB,
+            gl::UNSIGNED_BYTE,
+            std::ptr::null(),
+        );
 
-        gl::FramebufferTexture2D(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, gl::TEXTURE_2D, fb_texture, 0);
+        gl::FramebufferTexture2D(
+            gl::FRAMEBUFFER,
+            gl::COLOR_ATTACHMENT0,
+            gl::TEXTURE_2D,
+            fb_texture,
+            0,
+        );
 
         // renderbuffer for depth
         gl::GenRenderbuffers(1, &mut rbo);
         gl::BindRenderbuffer(gl::RENDERBUFFER, rbo);
         gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH24_STENCIL8, w, h);
-        gl::FramebufferRenderbuffer(gl::FRAMEBUFFER, gl::DEPTH_STENCIL_ATTACHMENT, gl::RENDERBUFFER, rbo);
+        gl::FramebufferRenderbuffer(
+            gl::FRAMEBUFFER,
+            gl::DEPTH_STENCIL_ATTACHMENT,
+            gl::RENDERBUFFER,
+            rbo,
+        );
 
         if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
             panic!("ERROR::FRAMEBUFFER:: Framebuffer is not complete!");

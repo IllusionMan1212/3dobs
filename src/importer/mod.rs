@@ -3,7 +3,11 @@ mod stl;
 
 use std::path::PathBuf;
 
-use crate::{mesh::Vertex, aabb::AABB, utils::{SupportedFileExtensions, self}};
+use crate::{
+    aabb::AABB,
+    mesh::Vertex,
+    utils::{self, SupportedFileExtensions},
+};
 
 #[derive(Debug, Clone)]
 pub enum TextureType {
@@ -15,7 +19,7 @@ pub enum TextureType {
     Displacement,
     Decal,
     Reflection,
-    Emissive
+    Emissive,
 }
 
 impl TextureType {
@@ -30,7 +34,7 @@ impl TextureType {
             "decal" => Some(TextureType::Decal),
             "refl" => Some(TextureType::Reflection),
             "map_Ke" => Some(TextureType::Emissive),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -43,11 +47,19 @@ pub struct Material {
     pub specular_color: glm::Vec3,
     pub specular_exponent: f32,
     pub opacity: f32,
-    pub textures: Vec<Texture>
+    pub textures: Vec<Texture>,
 }
 
 impl Material {
-    fn new(name: String, ambient: glm::Vec3, diffuse: glm::Vec3, specular: glm::Vec3, shininess: f32, opacity: f32, textures: Vec<Texture>) -> Self {
+    fn new(
+        name: String,
+        ambient: glm::Vec3,
+        diffuse: glm::Vec3,
+        specular: glm::Vec3,
+        shininess: f32,
+        opacity: f32,
+        textures: Vec<Texture>,
+    ) -> Self {
         Self {
             name,
             ambient_color: ambient,
@@ -55,7 +67,7 @@ impl Material {
             specular_color: specular,
             specular_exponent: shininess,
             opacity,
-            textures
+            textures,
         }
     }
 }
@@ -69,7 +81,7 @@ impl Default for Material {
             specular_color: glm::vec3(0.1, 0.1, 0.1),
             specular_exponent: 32.0,
             opacity: 1.0,
-            textures: Vec::new()
+            textures: Vec::new(),
         }
     }
 }
@@ -96,16 +108,15 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn new(path: std::path::PathBuf, typ: TextureType) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        path: std::path::PathBuf,
+        typ: TextureType,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let id = utils::load_texture(path)?;
 
-        Ok(Texture {
-            id,
-            typ,
-        })
+        Ok(Texture { id, typ })
     }
 }
-
 
 #[derive(Debug)]
 pub struct ObjMesh {
@@ -125,11 +136,11 @@ pub struct Object {
 pub fn load_from_file(path: &PathBuf) -> Result<Object, Box<dyn std::error::Error>> {
     let path_str = match path.to_str() {
         Some(s) => s,
-        None => return Err("Failed to convert path to string".into())
+        None => return Err("Failed to convert path to string".into()),
     };
 
     let file = std::fs::File::open(path_str)?;
-    // TODO: if no extension, then test for binary STL magic bytes 
+    // TODO: if no extension, then test for binary STL magic bytes
     // if no magic bytes, then try to guess based on the first line of text in the file
 
     let obj = match SupportedFileExtensions::from_str(path.extension().unwrap().to_str().unwrap()) {

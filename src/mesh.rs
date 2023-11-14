@@ -1,7 +1,11 @@
 use glad_gl::gl;
 use log::warn;
 
-use crate::{shader::Shader, utils, importer::{Material, TextureType}};
+use crate::{
+    importer::{Material, TextureType},
+    shader::Shader,
+    utils,
+};
 
 fn create_rotation_matrix(pitch: f32, yaw: f32, roll: f32, pivot: glm::Vec3) -> glm::Mat4 {
     let pitch = pitch.to_radians();
@@ -45,7 +49,12 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    pub fn new(name: &str, vertices: Vec<Vertex>, indices: Vec<u32>, material: Option<Material>) -> Mesh {
+    pub fn new(
+        name: &str,
+        vertices: Vec<Vertex>,
+        indices: Vec<u32>,
+        material: Option<Material>,
+    ) -> Mesh {
         let mut vao = 0;
         let mut vbo = 0;
         let mut ebo = 0;
@@ -58,22 +67,53 @@ impl Mesh {
             gl::BindVertexArray(vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-            gl::BufferData(gl::ARRAY_BUFFER, (std::mem::size_of::<Vertex>() * vertices.len() as usize) as isize, vertices.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (std::mem::size_of::<Vertex>() * vertices.len() as usize) as isize,
+                vertices.as_ptr() as *const std::ffi::c_void,
+                gl::STATIC_DRAW,
+            );
 
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(gl::ELEMENT_ARRAY_BUFFER, (std::mem::size_of::<u32>() * indices.len() as usize) as isize, indices.as_ptr() as *const std::ffi::c_void, gl::STATIC_DRAW);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (std::mem::size_of::<u32>() * indices.len() as usize) as isize,
+                indices.as_ptr() as *const std::ffi::c_void,
+                gl::STATIC_DRAW,
+            );
 
             // vertex positions
             gl::EnableVertexAttribArray(0);
-            gl::VertexAttribPointer(0, 3, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, std::ptr::null());
+            gl::VertexAttribPointer(
+                0,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                std::ptr::null(),
+            );
 
             // vertex normals
             gl::EnableVertexAttribArray(1);
-            gl::VertexAttribPointer(1, 3, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
+            gl::VertexAttribPointer(
+                1,
+                3,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                (3 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
 
             // vertex texture coords
             gl::EnableVertexAttribArray(2);
-            gl::VertexAttribPointer(2, 2, gl::FLOAT, gl::FALSE, std::mem::size_of::<Vertex>() as i32, (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void);
+            gl::VertexAttribPointer(
+                2,
+                2,
+                gl::FLOAT,
+                gl::FALSE,
+                std::mem::size_of::<Vertex>() as i32,
+                (6 * std::mem::size_of::<f32>()) as *const std::ffi::c_void,
+            );
 
             gl::BindVertexArray(0);
         }
@@ -98,15 +138,24 @@ impl Mesh {
 
         let model_mat = glm::ext::scale(&utils::mat_ident(), glm::vec3(scale, scale, scale));
         let model_mat = apply_rotation(&model_mat, self.rotation, pivot);
-        let model_mat = glm::ext::translate(&model_mat, glm::vec3(self.position.x, self.position.y, self.position.z));
+        let model_mat = glm::ext::translate(
+            &model_mat,
+            glm::vec3(self.position.x, self.position.y, self.position.z),
+        );
         shader.set_mat4fv("model", &model_mat);
 
         if glm::ext::is_invertible(&model_mat) {
             let normal_mat = glm::transpose(&glm::inverse(&model_mat));
             let normal_mat = glm::mat3(
-                normal_mat[0][0], normal_mat[0][1], normal_mat[0][2],
-                normal_mat[1][0], normal_mat[1][1], normal_mat[1][2],
-                normal_mat[2][0], normal_mat[2][1], normal_mat[2][2],
+                normal_mat[0][0],
+                normal_mat[0][1],
+                normal_mat[0][2],
+                normal_mat[1][0],
+                normal_mat[1][1],
+                normal_mat[1][2],
+                normal_mat[2][0],
+                normal_mat[2][1],
+                normal_mat[2][2],
             );
             shader.set_mat3fv("normalMatrix", &normal_mat);
             shader.set_bool("useNormalMatrix", true);
@@ -142,18 +191,18 @@ impl Mesh {
                     match tex.typ {
                         TextureType::Ambient => {
                             shader.set_int("material.texture_ambient", i as i32);
-                        },
+                        }
                         TextureType::Diffuse => {
                             shader.set_int("material.texture_diffuse", i as i32);
-                        },
+                        }
                         TextureType::Specular => {
                             shader.set_int("material.texture_specular", i as i32);
-                        },
+                        }
                         TextureType::Emissive => {
                             shader.set_int("material.texture_emission", i as i32);
                             shader.set_bool("hasEmissionTexture", true);
-                        },
-                        _ => {},
+                        }
+                        _ => {}
                     }
 
                     gl::BindTexture(gl::TEXTURE_2D, tex.id);
@@ -166,7 +215,12 @@ impl Mesh {
         unsafe {
             // draw Mesh
             gl::BindVertexArray(self.vao);
-            gl::DrawElements(gl::TRIANGLES, self.indices.len() as i32, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawElements(
+                gl::TRIANGLES,
+                self.indices.len() as i32,
+                gl::UNSIGNED_INT,
+                std::ptr::null(),
+            );
 
             // reset stuff to default
             gl::ActiveTexture(gl::TEXTURE0);
@@ -208,8 +262,7 @@ impl Vertex {
         Vertex {
             position,
             normal,
-            tex_coords
+            tex_coords,
         }
     }
 }
-

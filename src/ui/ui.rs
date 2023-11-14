@@ -1,10 +1,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use glad_gl::gl;
-use log::{info, debug};
-use serde::{Serialize, Deserialize};
+use log::{debug, info};
+use serde::{Deserialize, Serialize};
 
-use crate::{camera::Camera, model, imgui_glfw_support, imgui_opengl_renderer, mesh, ui, logger, utils};
+use crate::{
+    camera::Camera, imgui_glfw_support, imgui_opengl_renderer, logger, mesh, model, ui, utils,
+};
 
 #[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Settings {
@@ -31,7 +33,7 @@ pub struct State {
     pub logger: logger::WritableLog,
     pub settings: Settings,
     pub fps: f32,
-    pub show_textures: bool
+    pub show_textures: bool,
 }
 
 impl Default for State {
@@ -56,7 +58,7 @@ impl Default for State {
             logger: logger::WritableLog::default(),
             settings: Settings::default(),
             fps: 0.0,
-            show_textures: true
+            show_textures: true,
         }
     }
 }
@@ -72,30 +74,40 @@ impl State {
     }
 }
 
-pub fn init_imgui(window: &mut glfw::Window) -> (imgui::Context, imgui_glfw_support::GlfwPlatform, imgui_opengl_renderer::Renderer) {
+pub fn init_imgui(
+    window: &mut glfw::Window,
+) -> (
+    imgui::Context,
+    imgui_glfw_support::GlfwPlatform,
+    imgui_opengl_renderer::Renderer,
+) {
     let mut imgui = imgui::Context::create();
     imgui.set_ini_filename(None);
-    imgui.io_mut().config_flags.insert(imgui::ConfigFlags::DOCKING_ENABLE);
-    imgui.io_mut().config_flags.set(imgui::ConfigFlags::NAV_ENABLE_KEYBOARD, true);
+    imgui
+        .io_mut()
+        .config_flags
+        .insert(imgui::ConfigFlags::DOCKING_ENABLE);
+    imgui
+        .io_mut()
+        .config_flags
+        .set(imgui::ConfigFlags::NAV_ENABLE_KEYBOARD, true);
 
     let mut glfw_platform = imgui_glfw_support::GlfwPlatform::init(&mut imgui);
     glfw_platform.attach_window(
         imgui.io_mut(),
         &window,
-        imgui_glfw_support::HiDpiMode::Default
+        imgui_glfw_support::HiDpiMode::Default,
     );
 
-    imgui
-        .fonts()
-        .add_font(&[imgui::FontSource::TtfData {
-            data: include_bytes!("../../assets/fonts/Exo-Regular.ttf"),
-            size_pixels: 20.0,
-            config: Some(imgui::FontConfig {
-                oversample_h: 3,
-                pixel_snap_h: true,
-                ..imgui::FontConfig::default()
-            })
-        }]);
+    imgui.fonts().add_font(&[imgui::FontSource::TtfData {
+        data: include_bytes!("../../assets/fonts/Exo-Regular.ttf"),
+        size_pixels: 20.0,
+        config: Some(imgui::FontConfig {
+            oversample_h: 3,
+            pixel_snap_h: true,
+            ..imgui::FontConfig::default()
+        }),
+    }]);
 
     imgui.io_mut().font_global_scale = (1.0 / glfw_platform.hidpi_factor()) as f32;
 
@@ -114,17 +126,22 @@ pub fn import_model(state: &mut State) {
         .add_filter("All supported files", &["obj", "OBJ", "stl", "STL"])
         .add_filter("Wavefront OBJ (.obj)", &["obj", "OBJ"])
         .add_filter("STL (.stl)", &["stl", "STL"])
-        .pick_files() {
-            Some(m) => m,
-            None => return,
-        };
+        .pick_files()
+    {
+        Some(m) => m,
+        None => return,
+    };
     utils::import_models_from_paths(&models, state);
 }
 
 pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::Window) {
     ui.main_menu_bar(|| {
         ui.menu("File", || {
-            if ui.menu_item_config("Import Model(s)").shortcut("Ctrl+O").build() {
+            if ui
+                .menu_item_config("Import Model(s)")
+                .shortcut("Ctrl+O")
+                .build()
+            {
                 import_model(state);
             }
             if ui.menu_item_config("Settings").build() {
@@ -135,24 +152,50 @@ pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::
             }
         });
         ui.menu("View", || {
-            if ui.menu_item_config("Show Grid").selected(state.draw_grid).build() {
+            if ui
+                .menu_item_config("Show Grid")
+                .selected(state.draw_grid)
+                .build()
+            {
                 state.draw_grid = !state.draw_grid;
             }
-            if ui.menu_item_config("Draw Bounding Box").selected(state.draw_aabb).build() {
+            if ui
+                .menu_item_config("Draw Bounding Box")
+                .selected(state.draw_aabb)
+                .build()
+            {
                 state.draw_aabb = !state.draw_aabb;
             }
         });
         ui.menu("Help", || {
-            if ui.menu_item_config("Keybinds").selected(state.show_keybinds).build() {
+            if ui
+                .menu_item_config("Keybinds")
+                .selected(state.show_keybinds)
+                .build()
+            {
                 state.show_keybinds = !state.show_keybinds;
             }
-            if ui.menu_item_config("About").selected(state.show_help_menu_about).build() {
+            if ui
+                .menu_item_config("About")
+                .selected(state.show_help_menu_about)
+                .build()
+            {
                 state.show_help_menu_about = !state.show_help_menu_about;
             }
         });
-        let mem = state.objects.iter().fold(0 as usize, |acc, m| acc + m.mem_usage) as f32;
-        let mem_fps = format!("Mem: {:.1}MB | FPS: {:.1}", mem / (1024.0 * 1024.0), state.fps);
-        let avail_size = [*ui.content_region_avail().get(0).unwrap() - ui.calc_text_size(&mem_fps)[0], 0.0];
+        let mem = state
+            .objects
+            .iter()
+            .fold(0 as usize, |acc, m| acc + m.mem_usage) as f32;
+        let mem_fps = format!(
+            "Mem: {:.1}MB | FPS: {:.1}",
+            mem / (1024.0 * 1024.0),
+            state.fps
+        );
+        let avail_size = [
+            *ui.content_region_avail().get(0).unwrap() - ui.calc_text_size(&mem_fps)[0],
+            0.0,
+        ];
         ui.dummy(avail_size);
         ui.text(&mem_fps);
     });
@@ -168,11 +211,18 @@ fn draw_about_window(ui: &imgui::Ui, state: &mut State) {
         .resizable(false)
         .movable(false)
         .opened(&mut state.show_help_menu_about)
-        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
+        .position(
+            [display_size[0] / 2.0, display_size[1] / 2.0],
+            imgui::Condition::Always,
+        )
         .position_pivot([0.5, 0.5])
         .build(|| {
             ui.text("3dobs - 3D Object Browser");
-            ui.text(format!("Version: {}-{}", env!("CARGO_PKG_VERSION"), env!("GIT_HASH")));
+            ui.text(format!(
+                "Version: {}-{}",
+                env!("CARGO_PKG_VERSION"),
+                env!("GIT_HASH")
+            ));
             ui.text(format!("{}", env!("CARGO_PKG_DESCRIPTION")));
             ui.spacing();
             ui.spacing();
@@ -189,10 +239,16 @@ pub fn draw_settings_window(ui: &imgui::Ui, state: &mut State) {
     ui.window("Settings")
         .opened(&mut state.show_settings)
         .movable(false)
-        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
+        .position(
+            [display_size[0] / 2.0, display_size[1] / 2.0],
+            imgui::Condition::Always,
+        )
         .position_pivot([0.5, 0.5])
         .build(|| {
-            if ui.checkbox("Only allow one program instance (Reboot required when enabling)", &mut state.settings.one_instance) {
+            if ui.checkbox(
+                "Only allow one program instance (Reboot required when enabling)",
+                &mut state.settings.one_instance,
+            ) {
                 confy::store("3dobs", "settings", state.settings.clone()).unwrap();
             }
         });
@@ -208,10 +264,19 @@ fn draw_keybinds_window(ui: &imgui::Ui, state: &mut State) {
         .opened(&mut state.show_keybinds)
         .resizable(false)
         .movable(false)
-        .position([display_size[0] / 2.0, display_size[1] / 2.0], imgui::Condition::Always)
+        .position(
+            [display_size[0] / 2.0, display_size[1] / 2.0],
+            imgui::Condition::Always,
+        )
         .position_pivot([0.5, 0.5])
         .build(|| {
-            if let Some(..) = ui.begin_table_with_sizing("Keybinds Table", 2, imgui::TableFlags::SIZING_STRETCH_SAME, [0.0, 0.0], 0.0) {
+            if let Some(..) = ui.begin_table_with_sizing(
+                "Keybinds Table",
+                2,
+                imgui::TableFlags::SIZING_STRETCH_SAME,
+                [0.0, 0.0],
+                0.0,
+            ) {
                 ui.table_next_column();
                 ui.text_colored([0.7, 0.7, 0.6, 1.0], "Key");
                 ui.table_next_column();
@@ -226,7 +291,7 @@ fn draw_keybinds_window(ui: &imgui::Ui, state: &mut State) {
                 ui.text("Ctrl + Q");
                 ui.table_next_column();
                 ui.text("Quit");
-                
+
                 ui.table_next_column();
                 ui.text("Left Mouse Button");
                 ui.table_next_column();
@@ -269,33 +334,44 @@ fn draw_transformations(ui: &imgui::Ui, mesh: &mut mesh::Mesh) {
 }
 
 fn draw_mesh_hierarchy(ui: &imgui::Ui, mesh: &mut mesh::Mesh, i: usize) {
-    ui.tree_node_config(format!("{}###{}", mesh.name.as_str(), i)).build(|| {
-        ui.text(format!("Vertices: {}", mesh.vertices.len()));
-        ui.text(format!("Triangles: {}", mesh.indices.len() / 3));
-        ui.tree_node_config(mesh.material.name.as_str()).build(|| {
-            ui.text(format!("{}", mesh.material));
+    ui.tree_node_config(format!("{}###{}", mesh.name.as_str(), i))
+        .build(|| {
+            ui.text(format!("Vertices: {}", mesh.vertices.len()));
+            ui.text(format!("Triangles: {}", mesh.indices.len() / 3));
+            ui.tree_node_config(mesh.material.name.as_str()).build(|| {
+                ui.text(format!("{}", mesh.material));
+            });
+            ui.tree_node_config("Transformations").build(|| {
+                draw_transformations(ui, mesh);
+            })
         });
-        ui.tree_node_config("Transformations").build(|| {
-            draw_transformations(ui, mesh);
-        })
-    });
 }
 
 fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool {
     ui.table_next_column();
-    if ui.checkbox(format!("###{}", state.objects[idx].id), &mut (Some(state.objects[idx].id) == state.active_model)) {
+    if ui.checkbox(
+        format!("###{}", state.objects[idx].id),
+        &mut (Some(state.objects[idx].id) == state.active_model),
+    ) {
         state.objects[idx].reset_rotation();
         state.active_model = Some(state.objects[idx].id);
-        state.camera.focus_on_selected_model(state.active_model, &state.objects);
+        state
+            .camera
+            .focus_on_selected_model(state.active_model, &state.objects);
     }
 
     ui.table_next_column();
-    ui.tree_node_config(format!("{} ({:.1}MB)###{}", state.objects[idx].name.as_str(), state.objects[idx].mem_usage as f32 / (1024.0 * 1024.0), idx))
-        .build(|| {
-            for (j, mesh) in &mut state.objects[idx].meshes.iter_mut().enumerate() {
-                draw_mesh_hierarchy(ui, mesh, j);
-            }
-        });
+    ui.tree_node_config(format!(
+        "{} ({:.1}MB)###{}",
+        state.objects[idx].name.as_str(),
+        state.objects[idx].mem_usage as f32 / (1024.0 * 1024.0),
+        idx
+    ))
+    .build(|| {
+        for (j, mesh) in &mut state.objects[idx].meshes.iter_mut().enumerate() {
+            draw_mesh_hierarchy(ui, mesh, j);
+        }
+    });
 
     ui.table_next_column();
     if ui.small_button(format!("X###{}-{}", state.objects[idx].name.as_str(), idx)) {
@@ -312,7 +388,13 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
         .build(|| {
             let mut i = 0;
 
-            if let Some(..) = ui.begin_table_with_sizing("Objects Table", 3, imgui::TableFlags::SIZING_FIXED_FIT, [0.0, 0.0], 0.0) {
+            if let Some(..) = ui.begin_table_with_sizing(
+                "Objects Table",
+                3,
+                imgui::TableFlags::SIZING_FIXED_FIT,
+                [0.0, 0.0],
+                0.0,
+            ) {
                 ui.table_setup_column_with(imgui::TableColumnSetup {
                     name: "",
                     flags: imgui::TableColumnFlags::empty(),
@@ -339,7 +421,9 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
                         if state.active_model == Some(selected_obj_id) {
                             let model = state.objects.last_mut().map(|m| m.reset_rotation());
                             state.active_model = model.and_then(|o| Some(o.id));
-                            state.camera.focus_on_selected_model(state.active_model, &state.objects);
+                            state
+                                .camera
+                                .focus_on_selected_model(state.active_model, &state.objects);
                         }
                         continue;
                     }
@@ -415,12 +499,12 @@ fn create_initial_docking(ui: &imgui::Ui, state: &mut State) {
                             },
                             |down| {
                                 down.dock_window("Console");
-                            }
+                            },
                         )
                     },
                     |left| {
                         left.dock_window("Viewer");
-                    }
+                    },
                 )
             }
         });
@@ -441,7 +525,9 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
             state.viewport_size = tex_size;
 
             if ui.button("Reset Camera") {
-                state.camera.focus_on_selected_model(state.active_model, &state.objects);
+                state
+                    .camera
+                    .focus_on_selected_model(state.active_model, &state.objects);
             }
             ui.same_line();
             if ui.button("Capture Scene") {
@@ -457,7 +543,14 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
                 let mut pixels = vec![0u8; (w * h * 4) as usize];
 
                 unsafe {
-                    gl::GetTextureImage(texture, 0, gl::RGBA, gl::UNSIGNED_BYTE, (w * h * 4) as i32, pixels.as_mut_ptr() as *mut std::ffi::c_void);
+                    gl::GetTextureImage(
+                        texture,
+                        0,
+                        gl::RGBA,
+                        gl::UNSIGNED_BYTE,
+                        (w * h * 4) as i32,
+                        pixels.as_mut_ptr() as *mut std::ffi::c_void,
+                    );
                 }
 
                 let timestamp = SystemTime::now()
@@ -465,18 +558,27 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
                     .expect("Current time to not be before the UNIX epoch");
                 let file_name = format!("capture-{}.png", timestamp.as_secs());
                 let save_path = std::path::Path::new(file_name.as_str());
-                let capture = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(w as u32, h as u32, pixels).unwrap();
+                let capture =
+                    image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(w as u32, h as u32, pixels)
+                        .unwrap();
                 let capture = image::DynamicImage::ImageRgba8(capture);
                 let capture = capture.flipv();
-                let capture = capture.resize_exact(tex_size[0] as u32, tex_size[1] as u32, image::imageops::FilterType::Gaussian);
+                let capture = capture.resize_exact(
+                    tex_size[0] as u32,
+                    tex_size[1] as u32,
+                    image::imageops::FilterType::Gaussian,
+                );
                 let _ = capture.save(save_path);
                 let elapsed = now.elapsed();
 
-                info!("Scene capture saved to: {} successfully", save_path
-                    .canonicalize()
-                    .expect("Capture path to be canonicalized")
-                    .to_str()
-                    .expect("Capture path to be valid unicode"));
+                info!(
+                    "Scene capture saved to: {} successfully",
+                    save_path
+                        .canonicalize()
+                        .expect("Capture path to be canonicalized")
+                        .to_str()
+                        .expect("Capture path to be valid unicode")
+                );
 
                 debug!("Scene capture took: {}ms", elapsed.as_millis());
 
@@ -524,7 +626,9 @@ pub fn draw_ui(
     last_cursor: &mut Option<imgui::MouseCursor>,
     scene_fb_texture: u32,
 ) {
-    glfw_platform.prepare_frame(imgui.io_mut(), window).expect("Failed to prepare imgui frame");
+    glfw_platform
+        .prepare_frame(imgui.io_mut(), window)
+        .expect("Failed to prepare imgui frame");
 
     let ui = imgui.new_frame();
     create_initial_docking(ui, state);

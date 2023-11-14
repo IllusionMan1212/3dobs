@@ -1,4 +1,12 @@
-use std::{os::unix::net::{UnixListener, UnixStream}, path::PathBuf, io::{Write, Read}, fs::File, process::exit, thread, sync::mpsc::Receiver};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    os::unix::net::{UnixListener, UnixStream},
+    path::PathBuf,
+    process::exit,
+    sync::mpsc::Receiver,
+    thread,
+};
 
 use fs4::FileExt;
 use log::error;
@@ -19,12 +27,14 @@ fn send_args_to_existing_instance(pipe_path: PathBuf, args_paths: Vec<PathBuf>) 
     let data = bincode::serialize(&args_paths).expect("Failed to serialize arguments");
 
     // Send the arguments to the first instance.
-    stream
-        .write_all(&data)
-        .expect("Failed to send arguments");
+    stream.write_all(&data).expect("Failed to send arguments");
 }
 
-pub fn init(lock_file: &File, args_paths: Vec<PathBuf>, one_instance: bool) -> Option<Receiver<Vec<PathBuf>>> {
+pub fn init(
+    lock_file: &File,
+    args_paths: Vec<PathBuf>,
+    one_instance: bool,
+) -> Option<Receiver<Vec<PathBuf>>> {
     if !one_instance {
         return None;
     }
@@ -34,7 +44,7 @@ pub fn init(lock_file: &File, args_paths: Vec<PathBuf>, one_instance: bool) -> O
     let pipe_path = std::env::temp_dir().join(pipe_name);
 
     match lock_file.try_lock_exclusive() {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(_) => {
             println!("An instance of the program is already running");
             send_args_to_existing_instance(pipe_path, args_paths);

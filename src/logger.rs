@@ -1,4 +1,7 @@
-use std::{io::Write, sync::{Arc, RwLock}};
+use std::{
+    io::Write,
+    sync::{Arc, RwLock},
+};
 
 #[derive(Copy, Clone)]
 pub enum LogLevel {
@@ -63,12 +66,15 @@ impl Log {
 #[derive(Clone)]
 pub struct WritableLog {
     pub arc: Arc<RwLock<Log>>,
-    buf: String
+    buf: String,
 }
 
 impl Default for WritableLog {
     fn default() -> Self {
-        Self{arc: Arc::new(RwLock::new(Log::default())), buf: String::with_capacity(1024)}
+        Self {
+            arc: Arc::new(RwLock::new(Log::default())),
+            buf: String::with_capacity(1024),
+        }
     }
 }
 
