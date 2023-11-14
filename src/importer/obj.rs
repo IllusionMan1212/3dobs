@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     io::{BufRead, BufReader},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use log::{error, trace, warn};
@@ -29,7 +29,7 @@ enum ObjToken {
 }
 
 impl ObjToken {
-    fn from_str<'a>(s: &'a str) -> Option<ObjToken> {
+    fn from_str(s: &str) -> Option<ObjToken> {
         match s {
             "o" => Some(ObjToken::Object),
             "g" => Some(ObjToken::Group),
@@ -113,7 +113,7 @@ fn parse_mtl(
     for line in reader.lines() {
         let line = line?;
         // skip empty lines and comments
-        if line.is_empty() || line.chars().nth(0).is_some_and(|c| c == '#') {
+        if line.is_empty() || line.chars().next().is_some_and(|c| c == '#') {
             continue;
         }
 
@@ -174,12 +174,9 @@ fn parse_mtl(
                     let tex_type = TextureType::from_material_str(token).unwrap();
 
                     let name = iter.next().unwrap().to_string();
-                    let tex = if obj_textures.contains_key(&name) {
-                        let mut tex = obj_textures.get(&name).unwrap().clone();
-
-                        tex.typ = tex_type;
-                        tex
-                    } else {
+                    let tex = if let std::collections::hash_map::Entry::Vacant(e) =
+                        obj_textures.entry(name.clone())
+                    {
                         let path = path.parent().unwrap().join(&name);
                         let tex = match Texture::new(path, tex_type) {
                             Ok(v) => v,
@@ -188,8 +185,11 @@ fn parse_mtl(
                                 continue;
                             }
                         };
-
-                        obj_textures.insert(name, tex.clone());
+                        e.insert(tex.clone());
+                        tex
+                    } else {
+                        let mut tex = obj_textures.get(&name).unwrap().clone();
+                        tex.typ = tex_type;
                         tex
                     };
 
@@ -218,7 +218,7 @@ fn parse_mtl(
 }
 
 pub fn load_obj(
-    obj_path: &PathBuf,
+    obj_path: &Path,
     file: std::fs::File,
 ) -> Result<Object, Box<dyn std::error::Error>> {
     let now = std::time::Instant::now();
@@ -241,7 +241,7 @@ pub fn load_obj(
     for line in reader.lines() {
         let line = line?;
         // skip empty lines and comments
-        if line.is_empty() || line.chars().nth(0).is_some_and(|c| c == '#') {
+        if line.is_empty() || line.chars().next().is_some_and(|c| c == '#') {
             continue;
         }
 
@@ -338,9 +338,9 @@ pub fn load_obj(
                     let mut calculated_normal = glm::vec3(0.0, 0.0, 0.0);
 
                     if normals.is_empty() {
-                        let part0 = face[0].split("/").next().unwrap();
-                        let part1 = face[1].split("/").next().unwrap();
-                        let part2 = face[2].split("/").next().unwrap();
+                        let part0 = face[0].split('/').next().unwrap();
+                        let part1 = face[1].split('/').next().unwrap();
+                        let part2 = face[2].split('/').next().unwrap();
 
                         calculated_normal = glm::normalize(glm::cross(
                             temp_vertices[part1.parse::<i32>().unwrap() as usize - 1]
@@ -355,13 +355,13 @@ pub fn load_obj(
                             let mut it = vert.split("//");
                             let mut vert = it.next().unwrap().parse::<i32>().unwrap();
                             if vert < 0 {
-                                vert = temp_vertices.len() as i32 + vert;
+                                vert += temp_vertices.len() as i32;
                             } else {
                                 vert -= 1;
                             }
                             let mut normal = it.next().unwrap().parse::<i32>().unwrap();
                             if normal < 0 {
-                                normal = normals.len() as i32 + normal;
+                                normal += normals.len() as i32;
                             } else {
                                 normal -= 1;
                             }
@@ -370,23 +370,23 @@ pub fn load_obj(
                                 normal: *normals.get(normal as usize).unwrap(),
                                 tex_coords: glm::vec2(0.0, 0.0),
                             });
-                        } else if vert.matches("/").count() == 2 {
-                            let mut it = vert.split("/");
+                        } else if vert.matches('/').count() == 2 {
+                            let mut it = vert.split('/');
                             let mut vertex = it.next().unwrap().parse::<i32>().unwrap();
                             if vertex < 0 {
-                                vertex = temp_vertices.len() as i32 + vertex;
+                                vertex += temp_vertices.len() as i32;
                             } else {
                                 vertex -= 1;
                             }
                             let mut t_coords = it.next().unwrap().parse::<i32>().unwrap();
                             if t_coords < 0 {
-                                t_coords = tex_coords.len() as i32 + t_coords;
+                                t_coords += tex_coords.len() as i32;
                             } else {
                                 t_coords -= 1;
                             }
                             let mut normal = it.next().unwrap().parse::<i32>().unwrap();
                             if normal < 0 {
-                                normal = normals.len() as i32 + normal;
+                                normal += normals.len() as i32;
                             } else {
                                 normal -= 1;
                             }
@@ -395,17 +395,17 @@ pub fn load_obj(
                                 normal: *normals.get(normal as usize).unwrap(),
                                 tex_coords: *tex_coords.get(t_coords as usize).unwrap(),
                             });
-                        } else if vert.matches("/").count() == 1 {
-                            let mut it = vert.split("/");
+                        } else if vert.matches('/').count() == 1 {
+                            let mut it = vert.split('/');
                             let mut vertex = it.next().unwrap().parse::<i32>().unwrap();
                             if vertex < 0 {
-                                vertex = temp_vertices.len() as i32 + vertex;
+                                vertex += temp_vertices.len() as i32;
                             } else {
                                 vertex -= 1;
                             }
                             let mut t_coords = it.next().unwrap().parse::<i32>().unwrap();
                             if t_coords < 0 {
-                                t_coords = tex_coords.len() as i32 + t_coords;
+                                t_coords += tex_coords.len() as i32;
                             } else {
                                 t_coords -= 1;
                             }
@@ -417,7 +417,7 @@ pub fn load_obj(
                         } else {
                             let mut vert = vert.parse::<i32>().unwrap();
                             if vert < 0 {
-                                vert = temp_vertices.len() as i32 + vert;
+                                vert += temp_vertices.len() as i32;
                             } else {
                                 vert -= 1;
                             }

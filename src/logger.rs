@@ -43,7 +43,7 @@ impl LogMessage {
     pub fn new(level: LogLevel, message: &str) -> Self {
         Self {
             level,
-            message: format!("{}", message),
+            message: message.to_string(),
         }
     }
 }

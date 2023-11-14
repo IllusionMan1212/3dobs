@@ -61,7 +61,7 @@ impl AABB {
             },
         ];
 
-        let indices = vec![
+        let indices = [
             0, 1, 2, 2, 3, 0, // front
             1, 5, 6, 6, 2, 1, // right
             5, 4, 7, 7, 6, 5, // back
@@ -88,7 +88,7 @@ impl AABB {
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                (std::mem::size_of::<u32>() * indices.len() as usize) as isize,
+                (std::mem::size_of::<u32>() * indices.len()) as isize,
                 indices.as_ptr() as *const std::ffi::c_void,
                 gl::STATIC_DRAW,
             );
@@ -142,7 +142,7 @@ impl AABB {
     pub fn draw(&self, shader: &Shader, model_mat: &glm::Mat4) {
         shader.use_shader();
 
-        shader.set_mat4fv("model", &model_mat);
+        shader.set_mat4fv("model", model_mat);
         shader.set_3fv("material.ambient", glm::vec3(1.0, 0.627, 0.157));
         shader.set_3fv("material.diffuse", glm::vec3(1.0, 0.627, 0.157));
 

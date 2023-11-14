@@ -1,7 +1,7 @@
 mod obj;
 mod stl;
 
-use std::path::PathBuf;
+use std::{path::Path, str::FromStr};
 
 use crate::{
     aabb::AABB,
@@ -133,7 +133,7 @@ pub struct Object {
     pub aabb: AABB,
 }
 
-pub fn load_from_file(path: &PathBuf) -> Result<Object, Box<dyn std::error::Error>> {
+pub fn load_from_file(path: &Path) -> Result<Object, Box<dyn std::error::Error>> {
     let path_str = match path.to_str() {
         Some(s) => s,
         None => return Err("Failed to convert path to string".into()),
@@ -143,10 +143,10 @@ pub fn load_from_file(path: &PathBuf) -> Result<Object, Box<dyn std::error::Erro
     // TODO: if no extension, then test for binary STL magic bytes
     // if no magic bytes, then try to guess based on the first line of text in the file
 
-    let obj = match SupportedFileExtensions::from_str(path.extension().unwrap().to_str().unwrap()) {
-        Some(SupportedFileExtensions::STL) => stl::load_stl(file)?,
-        Some(SupportedFileExtensions::OBJ) => obj::load_obj(path, file)?,
-        _ => panic!("Unsupported file extension: {}", path_str),
+    let obj = match SupportedFileExtensions::from_str(path.extension().unwrap().to_str().unwrap())?
+    {
+        SupportedFileExtensions::STL => stl::load_stl(file)?,
+        SupportedFileExtensions::OBJ => obj::load_obj(path, file)?,
     };
 
     Ok(obj)

@@ -1,5 +1,4 @@
 use glad_gl::gl;
-use log::warn;
 
 use crate::{
     importer::{Material, TextureType},
@@ -20,15 +19,13 @@ fn create_rotation_matrix(pitch: f32, yaw: f32, roll: f32, pivot: glm::Vec3) -> 
     let trans_to_origin = glm::ext::translate(&mat, -glm::vec3(pivot.x, pivot.y, pivot.z));
     let trans_back_to_center = glm::ext::translate(&mat, glm::vec3(pivot.x, pivot.y, pivot.z));
 
-    let combined = trans_back_to_center * rot_z * rot_y * rot_x * trans_to_origin;
-
-    combined
+    trans_back_to_center * rot_z * rot_y * rot_x * trans_to_origin
 }
 
 pub fn apply_rotation(matrix: &glm::Mat4, rot: glm::Vec3, pivot: glm::Vec3) -> glm::Mat4 {
     let rot = create_rotation_matrix(rot.x, rot.y, rot.z, pivot);
 
-    return rot * *matrix;
+    rot * *matrix
 }
 
 #[derive(Debug)]
@@ -69,7 +66,7 @@ impl Mesh {
 
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (std::mem::size_of::<Vertex>() * vertices.len() as usize) as isize,
+                (std::mem::size_of::<Vertex>() * vertices.len()) as isize,
                 vertices.as_ptr() as *const std::ffi::c_void,
                 gl::STATIC_DRAW,
             );
@@ -77,7 +74,7 @@ impl Mesh {
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
-                (std::mem::size_of::<u32>() * indices.len() as usize) as isize,
+                (std::mem::size_of::<u32>() * indices.len()) as isize,
                 indices.as_ptr() as *const std::ffi::c_void,
                 gl::STATIC_DRAW,
             );
@@ -183,7 +180,7 @@ impl Mesh {
         }
 
         if show_textures {
-            shader.set_bool("useTextures", self.material.textures.len() > 0);
+            shader.set_bool("useTextures", !self.material.textures.is_empty());
             for (i, tex) in self.material.textures.iter().enumerate() {
                 shader.set_bool("hasEmissionTexture", false);
                 unsafe {

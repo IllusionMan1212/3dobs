@@ -14,8 +14,8 @@ pub struct Camera {
     pub fov: f32,
 }
 
-impl Camera {
-    pub fn new() -> Camera {
+impl Default for Camera {
+    fn default() -> Self {
         Camera {
             position: glm::vec3(0.0, 3.0, 3.0),
             front: glm::vec3(0.0, 0.0, -1.0),
@@ -28,7 +28,9 @@ impl Camera {
             fov: 45.0,
         }
     }
+}
 
+impl Camera {
     pub fn handle_mouse_scroll(&mut self, yoffset: f32, can_capture_cursor: bool, fov_zoom: bool) {
         if !can_capture_cursor {
             return;

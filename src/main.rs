@@ -1,8 +1,8 @@
+#![allow(clippy::no_effect)]
 use std::env;
 use std::fs::File;
 use std::path::PathBuf;
 
-use anyhow;
 use glad_gl::gl;
 use glfw::{Action, Context, Key, Modifiers};
 use simplelog::*;
@@ -114,7 +114,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         glm::vec3(0.0, 0.0, -3.0),
     ];
 
-    let mut delta_time: f32 = 0.0;
+    let mut delta_time;
     let mut last_frame: f32 = 0.0;
     let mut last_cursor = None;
 
@@ -131,8 +131,8 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         mesh_shader.use_shader();
 
         // set light uniforms
-        for i in 0..points_lights.len() {
-            mesh_shader.set_3fv(&format!("pointLights[{}].position", i), points_lights[i]);
+        for (i, point_light) in points_lights.iter().enumerate() {
+            mesh_shader.set_3fv(&format!("pointLights[{}].position", i), *point_light);
 
             mesh_shader.set_float(&format!("pointLights[{}].constant", i), 1.0);
             mesh_shader.set_float(&format!("pointLights[{}].linear", i), 0.09);
@@ -229,42 +229,37 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
                     glfw_platform.handle_event(imgui.io_mut(), &window, &event);
                 }
 
-                match event {
-                    glfw::WindowEvent::CursorPos(xpos, ypos) => {
-                        if first_mouse {
-                            last_x = xpos as f32;
-                            last_y = ypos as f32;
-                            first_mouse = false;
-                        }
-
-                        let xoffset = xpos as f32 - last_x;
-                        let yoffset = last_y - ypos as f32;
+                if let glfw::WindowEvent::CursorPos(xpos, ypos) = event {
+                    if first_mouse {
                         last_x = xpos as f32;
                         last_y = ypos as f32;
+                        first_mouse = false;
+                    }
 
-                        if state.can_capture_cursor
-                            && window.get_mouse_button(glfw::MouseButtonLeft) == Action::Press
-                        {
-                            if window.get_key(glfw::Key::LeftShift) == Action::Press {
-                                state.camera.move_camera(-xoffset, -yoffset);
-                            } else {
-                                if let Some(active_model) = state.active_model {
-                                    let x_rotation =
-                                        xoffset * state.camera.sensitivity * state.rotation_speed;
-                                    let y_rotation =
-                                        yoffset * state.camera.sensitivity * state.rotation_speed;
-                                    let model = state
-                                        .objects
-                                        .iter_mut()
-                                        .find(|m| m.id == active_model)
-                                        .unwrap();
-                                    // let x_rotation = glm::quat_angle_axis(xoffset * state.camera.sensitivity, &state.camera.up);
-                                    model.rotate(x_rotation, y_rotation);
-                                }
-                            }
+                    let xoffset = xpos as f32 - last_x;
+                    let yoffset = last_y - ypos as f32;
+                    last_x = xpos as f32;
+                    last_y = ypos as f32;
+
+                    if state.can_capture_cursor
+                        && window.get_mouse_button(glfw::MouseButtonLeft) == Action::Press
+                    {
+                        if window.get_key(glfw::Key::LeftShift) == Action::Press {
+                            state.camera.move_camera(-xoffset, -yoffset);
+                        } else if let Some(active_model) = state.active_model {
+                            let x_rotation =
+                                xoffset * state.camera.sensitivity * state.rotation_speed;
+                            let y_rotation =
+                                yoffset * state.camera.sensitivity * state.rotation_speed;
+                            let model = state
+                                .objects
+                                .iter_mut()
+                                .find(|m| m.id == active_model)
+                                .unwrap();
+                            // let x_rotation = glm::quat_angle_axis(xoffset * state.camera.sensitivity, &state.camera.up);
+                            model.rotate(x_rotation, y_rotation);
                         }
                     }
-                    _ => {}
                 }
             }
 
@@ -344,8 +339,8 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
 fn draw_grid(shader: &threedobs::shader::Shader, view_mat: &glm::Mat4, projection_mat: &glm::Mat4) {
     shader.use_shader();
-    shader.set_mat4fv("view", &view_mat);
-    shader.set_mat4fv("projection", &projection_mat);
+    shader.set_mat4fv("view", view_mat);
+    shader.set_mat4fv("projection", projection_mat);
     unsafe {
         gl::DrawArrays(gl::TRIANGLES, 0, 6);
     }
@@ -408,7 +403,7 @@ fn create_scene_framebuffer() -> u32 {
         gl::BindFramebuffer(gl::FRAMEBUFFER, fb);
     }
 
-    return fb;
+    fb
 }
 
 fn create_scene_texture_and_renderbuffer(window: &glfw::Window, fbo: u32) -> (u32, u32) {
@@ -461,5 +456,5 @@ fn create_scene_texture_and_renderbuffer(window: &glfw::Window, fbo: u32) -> (u3
         }
     }
 
-    return (fb_texture, rbo);
+    (fb_texture, rbo)
 }

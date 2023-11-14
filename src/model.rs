@@ -49,7 +49,7 @@ impl Model {
 
         model.set_mem_usage();
 
-        return model;
+        model
     }
 
     pub fn draw(&self, shader: &Shader, draw_aabb: bool, show_textures: bool) {
@@ -109,7 +109,7 @@ impl Model {
             size += std::mem::size_of::<importer::Material>();
 
             for texture in &mesh.material.textures {
-                size += std::mem::size_of_val(&texture);
+                size += std::mem::size_of_val(texture);
             }
             for vertex in &mesh.vertices {
                 size += std::mem::size_of_val(vertex);

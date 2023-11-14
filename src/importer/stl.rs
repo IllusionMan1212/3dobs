@@ -178,7 +178,7 @@ fn parse_binary_stl(mut file: std::fs::File) -> Result<Object, Box<dyn std::erro
     file.seek(std::io::SeekFrom::Start(STL_HEADER_SIZE))?;
 
     let mut buf: [u8; 4] = [0; 4];
-    file.read(&mut buf)?;
+    file.read_exact(&mut buf)?;
     let tri_count: u32 = u32::from_le_bytes(buf);
 
     let mut min_aabb = glm::vec3(f32::MAX, f32::MAX, f32::MAX);

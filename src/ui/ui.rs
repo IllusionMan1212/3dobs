@@ -52,7 +52,7 @@ impl Default for State {
             fov_zoom: true,
             rotation_speed: 1.0,
             wireframe: false,
-            camera: Camera::new(),
+            camera: Camera::default(),
             objects: vec![],
             viewport_size: [0.0, 0.0],
             logger: logger::WritableLog::default(),
@@ -70,7 +70,7 @@ impl State {
             id = last_model.id + 1;
         }
 
-        return id;
+        id
     }
 }
 
@@ -95,7 +95,7 @@ pub fn init_imgui(
     let mut glfw_platform = imgui_glfw_support::GlfwPlatform::init(&mut imgui);
     glfw_platform.attach_window(
         imgui.io_mut(),
-        &window,
+        window,
         imgui_glfw_support::HiDpiMode::Default,
     );
 
@@ -114,7 +114,7 @@ pub fn init_imgui(
     gl::load(|e| window.get_proc_address(e) as *const std::os::raw::c_void);
 
     let renderer = imgui_opengl_renderer::Renderer::new(&mut imgui);
-    glfw_platform.set_clipboard_backend(&mut imgui, &window);
+    glfw_platform.set_clipboard_backend(&mut imgui, window);
 
     (imgui, glfw_platform, renderer)
 }
@@ -186,14 +186,14 @@ pub fn draw_main_menu_bar(ui: &imgui::Ui, state: &mut State, window: &mut glfw::
         let mem = state
             .objects
             .iter()
-            .fold(0 as usize, |acc, m| acc + m.mem_usage) as f32;
+            .fold(0_usize, |acc, m| acc + m.mem_usage) as f32;
         let mem_fps = format!(
             "Mem: {:.1}MB | FPS: {:.1}",
             mem / (1024.0 * 1024.0),
             state.fps
         );
         let avail_size = [
-            *ui.content_region_avail().get(0).unwrap() - ui.calc_text_size(&mem_fps)[0],
+            *ui.content_region_avail().first().unwrap() - ui.calc_text_size(&mem_fps)[0],
             0.0,
         ];
         ui.dummy(avail_size);
@@ -223,7 +223,7 @@ fn draw_about_window(ui: &imgui::Ui, state: &mut State) {
                 env!("CARGO_PKG_VERSION"),
                 env!("GIT_HASH")
             ));
-            ui.text(format!("{}", env!("CARGO_PKG_DESCRIPTION")));
+            ui.text(env!("CARGO_PKG_DESCRIPTION"));
             ui.spacing();
             ui.spacing();
             ui.text(format!("Made by: {}", env!("CARGO_PKG_AUTHORS")));
@@ -379,7 +379,7 @@ fn draw_object_hierarchy(ui: &imgui::Ui, state: &mut State, idx: usize) -> bool 
         return true;
     }
 
-    return false;
+    false
 }
 
 fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
@@ -420,7 +420,7 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
                         state.objects.remove(i);
                         if state.active_model == Some(selected_obj_id) {
                             let model = state.objects.last_mut().map(|m| m.reset_rotation());
-                            state.active_model = model.and_then(|o| Some(o.id));
+                            state.active_model = model.map(|o| o.id);
                             state
                                 .camera
                                 .focus_on_selected_model(state.active_model, &state.objects);
@@ -428,7 +428,7 @@ fn draw_objects_window(ui: &imgui::Ui, state: &mut State) {
                         continue;
                     }
 
-                    i = i + 1;
+                    i += 1;
                 }
             }
         });
@@ -548,7 +548,7 @@ fn draw_viewport(ui: &imgui::Ui, state: &mut State, texture: u32) {
                         0,
                         gl::RGBA,
                         gl::UNSIGNED_BYTE,
-                        (w * h * 4) as i32,
+                        w * h * 4,
                         pixels.as_mut_ptr() as *mut std::ffi::c_void,
                     );
                 }
@@ -648,7 +648,7 @@ pub fn draw_ui(
         let cursor = ui.mouse_cursor();
         if *last_cursor != cursor {
             *last_cursor = cursor;
-            glfw_platform.prepare_render(&ui, window);
+            glfw_platform.prepare_render(ui, window);
         }
     }
 

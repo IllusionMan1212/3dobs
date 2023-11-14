@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use ::log::{error, info};
 use anyhow::{Context, Result};
@@ -12,12 +13,14 @@ pub enum SupportedFileExtensions {
     STL,
 }
 
-impl SupportedFileExtensions {
-    pub fn from_str(s: &str) -> Option<Self> {
+impl std::str::FromStr for SupportedFileExtensions {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_ascii_lowercase().as_str() {
-            "obj" => Some(Self::OBJ),
-            "stl" => Some(Self::STL),
-            _ => None,
+            "obj" => Ok(Self::OBJ),
+            "stl" => Ok(Self::STL),
+            _ => Err(format!("Unsupported file extension: {}", s)),
         }
     }
 }
@@ -91,7 +94,7 @@ pub fn import_models_from_paths(paths: &Vec<PathBuf>, state: &mut ui::ui::State)
         }
         match model_path.extension() {
             Some(ext) => {
-                if SupportedFileExtensions::from_str(ext.to_str().unwrap()).is_none() {
+                if SupportedFileExtensions::from_str(ext.to_str().unwrap()).is_err() {
                     info!(
                         "Skipping file \"{}\" because it is not an OBJ or STL file",
                         filename.unwrap().to_str().unwrap()

@@ -17,9 +17,7 @@ fn create_named_pipe(pipe_path: PathBuf) -> UnixListener {
         std::fs::remove_file(&pipe_path).expect("Failed to remove existing pipe");
     }
 
-    let listener = UnixListener::bind(&pipe_path).expect("Failed to create named pipe");
-
-    listener
+    UnixListener::bind(&pipe_path).expect("Failed to create named pipe")
 }
 
 fn send_args_to_existing_instance(pipe_path: PathBuf, args_paths: Vec<PathBuf>) {
