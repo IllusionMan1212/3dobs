@@ -64,9 +64,9 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
 
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS)?;
 
-    glfw::WindowHint::ContextVersion(3, 3);
-    glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core);
-    glfw::WindowHint::OpenGlForwardCompat(true);
+    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
+    glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+    glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
 
     let (mut window, events) = glfw
         .create_window(1200, 800, "3dobs", glfw::WindowMode::Windowed)
@@ -161,7 +161,7 @@ fn main() -> anyhow::Result<(), Box<dyn std::error::Error>> {
         mesh_shader.set_float("spotLight.quadratic", 0.032);
 
         mesh_shader.set_3fv("dirLight.direction", glm::vec3(-0.2, -1.0, -0.3));
-        mesh_shader.set_3fv("dirLight.ambient", glm::vec3(0.1, 0.1, 0.1));
+        mesh_shader.set_3fv("dirLight.ambient", glm::vec3(0.3, 0.3, 0.3));
         mesh_shader.set_3fv("dirLight.diffuse", glm::vec3(1.0, 1.0, 1.0));
         mesh_shader.set_3fv("dirLight.specular", glm::vec3(1.0, 1.0, 1.0));
 
