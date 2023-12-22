@@ -224,7 +224,7 @@ pub fn load_obj(
     let now = std::time::Instant::now();
     let reader = BufReader::with_capacity(BUF_CAP, file);
     let mut object_name = String::new();
-    let mut current_mesh_name = String::new();
+    let current_mesh_name = String::new();
     let mut temp_vertices = Vec::new();
     let mut vertices = Vec::new();
     let mut normals = Vec::new();
@@ -270,28 +270,6 @@ pub fn load_obj(
                     indices_counter = 0;
 
                     object_name = iter.next().unwrap_or("").to_string();
-                }
-                Some(ObjToken::Group) => {
-                    let name = {
-                        if current_mesh_name.is_empty() {
-                            object_name.clone()
-                        } else {
-                            current_mesh_name.clone()
-                        }
-                    };
-                    if !vertices.is_empty() {
-                        meshes.push(ObjMesh {
-                            name,
-                            vertices: vertices.clone(),
-                            indices: indices.clone(),
-                            material: current_material.clone(),
-                        });
-                    }
-                    vertices.clear();
-                    indices.clear();
-                    indices_counter = 0;
-
-                    current_mesh_name = iter.next().unwrap_or("default_mesh").to_string();
                 }
                 Some(ObjToken::Vertex) => {
                     let vec = iter.collect::<Vec<_>>();
@@ -475,16 +453,24 @@ pub fn load_obj(
                     indices.clear();
                     indices_counter = 0;
 
-                    let mat_name = iter.next().unwrap_or("").to_string();
-                    current_material = materials.get(&mat_name).cloned();
+                    let mat_name = iter.next();
+                    if mat_name.is_none() {
+                        error!("Material usage statement has no material name");
+                        continue;
+                    }
+                    let mat = materials.get(&mat_name.unwrap().to_owned()).cloned();
+
+                    if mat.is_none() {
+                        warn!("Usage of material \"{}\" which is not defined", mat_name.unwrap());
+                    }
+
+                    current_material = mat;
                 }
                 // Things we ignore have a statement to not clutter the log
-                Some(ObjToken::Line) | Some(ObjToken::Point) => {
-                    // we don't handle lines or points
-                }
-                Some(ObjToken::SmoothShading) => {
-                    // idc about this
-                }
+                Some(ObjToken::Line) |
+                Some(ObjToken::Point) |
+                Some(ObjToken::SmoothShading) |
+                Some(ObjToken::Group) => {}
                 _ => {
                     warn!("Unhandled obj token: {}", token)
                 }
